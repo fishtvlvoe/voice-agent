@@ -56,6 +56,30 @@ export function buildMemoryHint(savedMemory) {
   return `使用者已儲存的個人常用聯絡資料：${items.join('、')}。當使用者說「用我的電話」、「用我的手機」、「用我的信箱」、「用我的地址」或類似代換意圖時，請直接代入已存的值，不需要再向使用者詢問該欄位。`;
 }
 
+export function buildCustomerProfileHint(profile) {
+  if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+    return '目前沒有預載的客戶檔。不要假裝認識對方。先用對方自己說的資訊。';
+  }
+
+  const items = [];
+  if (typeof profile.display_name === 'string' && profile.display_name.trim()) {
+    items.push(`姓名：${profile.display_name.trim()}`);
+  }
+  if (typeof profile.member_tier === 'string' && profile.member_tier.trim()) {
+    items.push(`會員等級：${profile.member_tier.trim()}`);
+  }
+  if (typeof profile.last_order_summary === 'string' && profile.last_order_summary.trim()) {
+    items.push(`最近訂單：${profile.last_order_summary.trim()}`);
+  }
+  if (typeof profile.notes === 'string' && profile.notes.trim()) {
+    items.push(`備註：${profile.notes.trim()}`);
+  }
+  if (items.length === 0) {
+    return '目前沒有可用的預載客戶檔資料。不要假裝認識對方。先用對方自己說的資訊。';
+  }
+  return `預載客戶檔（僅供對話參考）：${items.join('；')}。不要一次念出整份檔案，只在相關時引用。若對方說的跟檔案不一致，以對方這次說的為準，並口頭確認。不要洩漏 LINE 使用者 ID 或系統內部欄位名稱。`;
+}
+
 // 語音對話的 LLM 沒有內建時鐘，只能靠 system instructions 給它一個時間錨點自己換算相對日期。
 export function buildTodayHint(now = new Date()) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
