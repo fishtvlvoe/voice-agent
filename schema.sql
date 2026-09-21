@@ -41,6 +41,6 @@ CREATE TABLE IF NOT EXISTS customer_profiles (
   member_tier TEXT CHECK (member_tier IS NULL OR length(member_tier) <= 20),
   notes TEXT CHECK (notes IS NULL OR length(notes) <= 200),
   last_order_summary TEXT CHECK (last_order_summary IS NULL OR length(last_order_summary) <= 200),
-  extra_json TEXT,
+  extra_json TEXT CHECK (extra_json IS NULL OR length(extra_json) <= 2000),
   updated_at INTEGER NOT NULL
 );

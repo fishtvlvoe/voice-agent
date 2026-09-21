@@ -38,6 +38,7 @@ npm install
 wrangler d1 create voice-agent-db   # 建好後把 database_id 貼進 wrangler.toml
 wrangler d1 execute voice-agent-db --file=schema.sql
 # 預載客戶檔測試資料：INSERT INTO customer_profiles (line_user_id, display_name, member_tier, notes, last_order_summary, updated_at) VALUES ('U...', '測試客戶', 'VIP', '偏好電話聯絡', '2026-09-01 已完成訂單', unixepoch());
+# 注意：display_name/member_tier/notes/last_order_summary 內容會直接進語音 AI 的 prompt，勿夾帶「忽略先前指示」之類的指令文字。
 wrangler secret put LIFF_ID
 wrangler secret put XAI_API_KEY
 npm run dev
