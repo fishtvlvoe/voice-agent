@@ -93,7 +93,7 @@ export async function getCustomerProfile(env, lineUserId) {
 async function handleVoiceSessionToken(request, env) {
   const { lineUserId, idToken } = await readJsonObject(request);
   if (!lineUserId) return json({ error: 'Missing lineUserId' }, 400);
-  if (!idToken) return json({ error: 'idToken required' }, 401);
+  if (!idToken) return json({ error: 'idToken required' }, 400);
 
   const identity = await verifyLineIdentity(idToken, env, lineUserId);
   if (!identity.ok) return json({ error: identity.error }, identity.status);
