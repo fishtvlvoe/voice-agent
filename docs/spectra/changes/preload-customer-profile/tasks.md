@@ -20,7 +20,7 @@
 ## 5. 既有行為回歸驗證
 
 - [ ] 5.1 確認 `user_memory` 的既有記憶行為未受影響。驗證：對已存有記憶資料的 line_user_id 呼叫 `POST /api/voice-session/token`，回應的 `savedMemory` 內容與本次改動前一致（對應 spec Requirement: Existing voice intake behavior is unaffected）
-- [ ] 5.2 確認缺少或無效 idToken 時仍回 401。驗證：對 `POST /api/voice-session/token` 送出缺少 idToken 的請求，斷言回應狀態碼為 401 且未觸發任何 customer_profiles 查詢（對應 spec Scenario: Missing or invalid idToken still rejected）
+- [ ] 5.2 確認缺少 idToken 時仍回 400、有 idToken 但驗證失敗時仍回 401，兩者都不受本次改動影響。驗證：對 `POST /api/voice-session/token` 分別送出缺少 idToken 的請求（斷言 400）與帶無效 idToken 的請求（斷言 401），兩者皆未觸發任何 customer_profiles 查詢（對應 spec Scenario: Missing idToken still rejected with 400、Scenario: Invalid idToken still rejected with 401）
 - [ ] 5.3 確認 `/api/voice-intake/submit`、`/api/voice-intake/remember` 的既有回應格式與行為不變。驗證：對兩支 API 各送出一次符合既有格式的請求，回應欄位與狀態碼與本次改動前一致
 
 ## 6. 文件

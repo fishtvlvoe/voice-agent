@@ -77,7 +77,12 @@ The system SHALL preserve existing behavior of user memory recall, voice intake 
 - **WHEN** a LINE user with previously saved memory (phone/email/address) starts a new voice session
 - **THEN** the saved memory is still included in the session instructions exactly as before this capability was added
 
-#### Scenario: Missing or invalid idToken still rejected
+#### Scenario: Missing idToken still rejected with 400
 
-- **WHEN** a voice session token request is made without a valid LINE idToken
+- **WHEN** a voice session token request is made without an idToken at all
+- **THEN** the system still returns HTTP 400, unaffected by the customer profile lookup
+
+#### Scenario: Invalid idToken still rejected with 401
+
+- **WHEN** a voice session token request is made with an idToken that fails LINE identity verification
 - **THEN** the system still returns HTTP 401, unaffected by the customer profile lookup
