@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>通用語音助理架構</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card:#ffffff; --ink:#1f2328; --muted:#6b7280;
+    --line:#e5e7eb; --accent:#2563eb; --accent-bg:#eff6ff;
+    --warn:#b45309; --warn-bg:#fffbeb; --ok:#15803d; --ok-bg:#f0fdf4;
+    --cut:#dc2626; --cut-bg:#fef2f2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;line-height:1.6}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin-bottom:16px}
+  h2{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  h2 .n{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:6px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  code{background:#f1f2f4;padding:1px 6px;border-radius:4px;font-size:12.5px}
+  .note{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .keep{background:var(--ok-bg);color:var(--ok)}
+  .cutrow{background:var(--cut-bg);color:var(--cut)}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+  .tag.keep{background:var(--ok-bg);color:var(--ok)}
+  .tag.cut{background:var(--cut-bg);color:var(--cut)}
+  .tag.new{background:var(--accent-bg);color:var(--accent)}
+  .arch{display:flex;flex-direction:column;gap:10px;margin:8px 0}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .box{flex:1;min-width:150px;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;background:#fafafa}
+  .box.new{border-color:#93c5fd;background:var(--accent-bg)}
+  .box .t{font-weight:700;font-size:13px;margin-bottom:4px}
+  .box .d{font-size:12px;color:var(--muted)}
+  .downarrow{text-align:center;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>通用語音助理架構</h1>
+  <div class="sub">拿掉表單邏輯，只留骨架 —— 給任何用途的語音助理用，不綁定特定業務</div>
+
+  <div class="card">
+    <h2><span class="n">1</span>骨架 vs 內容，這次明確切開</h2>
+    <table>
+      <tr><th>項目</th><th>去留</th><th>說明</th></tr>
+      <tr><td>身分驗證流程</td><td><span class="tag keep">留</span></td><td>「驗證是誰、換一組短效通行證」這套機制留著，裡面認證的對象從「只認 LINE」改成可以換</td></tr>
+      <tr><td>跟語音 AI 換通行證</td><td><span class="tag keep">留</span></td><td>跟 xAI Realtime API 交握的流程本身不綁任何業務內容</td></tr>
+      <tr><td>function calling 機制</td><td><span class="tag keep">留</span></td><td>「AI 判斷資訊收集完 → 呼叫工具 → 存起來」這個機制留著</td></tr>
+      <tr><td>記憶功能</td><td><span class="tag keep">留</span></td><td>記住使用者常用資料、下次代入，這是通用能力</td></tr>
+      <tr><td>四種表單定義</td><td><span class="tag cut">砍</span></td><td>一對一／引薦單／來賓／感謝金額，這四種連同必填欄位定義整包不要</td></tr>
+      <tr><td>人設指令文字</td><td><span class="tag cut">砍</span></td><td>「你是＿分會的語音助理」這類寫死的角色設定文字整段換掉</td></tr>
+      <tr><td>聯絡人別名清單</td><td><span class="tag cut">砍</span></td><td>原本用來校正同音錯字的「會員姓名清單」，改成用不到就先不做，或換成使用者自己的通訊錄</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>換血後的核心差異：從「寫死表單」變「設定驅動」</h2>
+    <p style="font-size:13.5px">原本四種表單、每種要填什麼欄位，是<b>寫死在程式碼裡</b>的。通用版要改成<b>設定檔驅動</b>——助理要收集什麼資訊、人設要講什麼話，寫在一份設定裡，不寫在程式邏輯裡。以後要改助理的用途，改設定檔就好，不用動程式碼。</p>
+    <table>
+      <tr><th>原本（寫死）</th><th>通用版（設定驅動）</th></tr>
+      <tr><td><code>VOICE_FORMS = { one_on_one: [...], referral: [...] }</code></td>
+        <td><code>collectSchema = 從設定檔載入</code>，欄位跟表單類型都是資料，不是程式碼</td></tr>
+      <tr><td><code>AGENT_INSTRUCTIONS</code> 整段寫死中文人設</td>
+        <td>人設文字也是設定檔的一部分，可替換</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span>通用語音助理模組圖</h2>
+    <div class="arch">
+      <div class="row">
+        <div class="box new"><div class="t">入口<span class="tag new" style="margin-left:6px">多通路</span></div><div class="d">LINE／網頁／App，共用同一套後端</div></div>
+      </div>
+      <div class="downarrow">↓</div>
+      <div class="row">
+        <div class="box"><div class="t">身分層<span class="tag keep" style="margin-left:6px">留</span></div><div class="d">驗證是誰，換內部使用者代碼</div></div>
+      </div>
+      <div class="row">
+        <div class="box"><div class="t">語音對話引擎<span class="tag keep" style="margin-left:6px">留</span></div><div class="d">xAI Realtime，交握＋通行證機制不變</div></div>
+      </div>
+      <div class="row">
+        <div class="box new"><div class="t">助理設定檔<span class="tag new" style="margin-left:6px">新增</span></div><div class="d">人設文字、要收集的欄位，全部從這裡載入，不寫死</div></div>
+      </div>
+      <div class="row">
+        <div class="box"><div class="t">function calling 工具<span class="tag keep" style="margin-left:6px">留</span></div><div class="d">存這筆／送出／記住，機制不變，內容依設定檔而定</div></div>
+      </div>
+      <div class="row">
+        <div class="box new"><div class="t">資料清洗層<span class="tag new" style="margin-left:6px">新增</span></div><div class="d">格式正規化、同音校正</div></div>
+      </div>
+      <div class="row">
+        <div class="box"><div class="t">結構化資料庫<span class="tag keep" style="margin-left:6px">留</span></div><div class="d">存收集到的資訊＋使用者記憶</div></div>
+        <div class="box new"><div class="t">向量知識庫<span class="tag new" style="margin-left:6px">新增</span></div><div class="d">回答開放式問題用，跟上面資料庫分開</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">4</span>一句話</h2>
+    <p style="font-size:13.5px">留下來的是「怎麼驗證身分、怎麼跟語音 AI 交握、怎麼用工具收資料、怎麼記憶」這套機制。原本寫死的四種表單跟人設文字整包換成一份可以替換的設定檔，助理要做什麼用途，改設定檔就好。</p>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+name = "voice-agent"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "src/liff"
+binding = "ASSETS"
+
+# 部署前用 `wrangler d1 create voice-agent-db` 建立，把回傳的 database_id 貼進來。
+[[d1_databases]]
+binding = "DB"
+database_name = "voice_agent_db"
+database_id = ""
+
+# 知識庫問答用的向量索引，部署前用 `wrangler vectorize create` 建立。
+# [[vectorize]]
+# binding = "KNOWLEDGE_INDEX"
+# index_name = "voice-agent-knowledge-index"
+
+[ai]
+binding = "AI"
+
+[vars]
+# LIFF_ID: 請用 `wrangler secret put LIFF_ID` 設定（你的 LINE LIFF App ID）
+# XAI_API_KEY: 請用 `wrangler secret put XAI_API_KEY` 設定（xAI Realtime API 金鑰）

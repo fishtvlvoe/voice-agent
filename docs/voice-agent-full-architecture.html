@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Voice Agent 完整模組架構</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card:#ffffff; --ink:#1f2328; --muted:#6b7280;
+    --line:#e5e7eb; --accent:#2563eb; --accent-bg:#eff6ff;
+    --warn:#b45309; --warn-bg:#fffbeb; --ok:#15803d; --ok-bg:#f0fdf4;
+    --gap:#dc2626; --gap-bg:#fef2f2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;line-height:1.6}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin-bottom:16px}
+  h2{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  h2 .n{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:6px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  code{background:#f1f2f4;padding:1px 6px;border-radius:4px;font-size:12.5px}
+  ul{margin:6px 0;padding-left:20px;font-size:13.5px}
+  li{margin:3px 0}
+  .note{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .gapbox{background:var(--gap-bg);border:1px solid #fecaca;border-radius:8px;padding:12px 14px;margin:10px 0}
+  .gapbox b{color:var(--gap)}
+  .arch{display:flex;flex-direction:column;gap:10px;margin:8px 0}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .box{flex:1;min-width:150px;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;background:#fafafa}
+  .box.new{border-color:#93c5fd;background:var(--accent-bg)}
+  .box.core{border-color:#d1d5db;background:#fff}
+  .box .t{font-weight:700;font-size:13px;margin-bottom:4px}
+  .box .d{font-size:12px;color:var(--muted)}
+  .downarrow{text-align:center;color:var(--muted);font-size:14px}
+  .pill{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;font-weight:600;margin-left:6px}
+  .pill.new{background:var(--accent-bg);color:var(--accent)}
+  .pill.exist{background:var(--ok-bg);color:var(--ok)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Voice Agent 完整模組架構</h1>
+  <div class="sub">回答：WeKnora 能補什麼、原架構缺什麼、完整模組怎麼分</div>
+
+  <div class="card">
+    <h2><span class="n">1</span>WeKnora 能做這件事嗎？</h2>
+    <p style="font-size:13.5px">WeKnora 是一套 <b>RAG 知識庫框架</b>：文件解析 → 切塊 → embedding → BM25 + 向量混合搜尋 → 排序融合 → 組成 Context 給 LLM 回答，並附上引用來源。它解決的是「<b>問企業知識庫問題時，答案要有根據，不能瞎編</b>」這一件事。</p>
+    <div class="gapbox">
+      <b>它不解決的兩件事，剛好就是你問的兩個缺口：</b>
+      <ul>
+        <li><b>資料清洗</b>：WeKnora 假設進來的是「已經是文字的文件」（PDF、Word、網頁）。語音收單的原始輸入是「語音辨識後的口語文字」，充滿同音錯字、不完整句子、講一半改口——這一段清洗，WeKnora 完全沒有，要另外做</li>
+        <li><b>跨通路使用</b>：WeKnora 只管「知識庫怎麼被查」，不管「使用者從哪裡進來」。LINE、網頁、App 是三種不同的「入口」，這是另一層要設計</li>
+      </ul>
+    </div>
+    <div class="note">結論：WeKnora 適合放進架構「當一個模組」——回答一般性問題用的知識庫引擎。它不能取代語音收單本身的資料清洗跟多通路，那兩塊要另外建。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>原本架構的兩個洞</h2>
+    <table>
+      <tr><th>洞</th><th>現況</th><th>後果</th></tr>
+      <tr><td>沒有資料清洗層</td>
+        <td>語音辨識出來的欄位直接被當成「使用者確認過的正確資料」寫進資料庫，只做繁簡轉換跟白名單檢查</td>
+        <td>同音錯字、地址格式不一致、電話格式不一致，全部原樣進資料庫，之後要用這批資料做任何分析或比對都會失準</td></tr>
+      <tr><td>綁死 LINE 一種入口</td>
+        <td>身分驗證只認 LINE idToken，結果送出去也只走 LINE 的服務綁定；表單頁面本身也是 LIFF（LINE 內嵌瀏覽器專用）</td>
+        <td>使用者不用 LINE 就完全用不了；換一個通路（獨立網頁、App、電話）等於要重寫一整套</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span>模組架構：把「入口」「核心」「知識庫」三層拆開</h2>
+    <div class="arch">
+      <div class="row">
+        <div class="box new"><div class="t">LINE 入口<span class="pill exist">既有</span></div><div class="d">LIFF 頁面</div></div>
+        <div class="box new"><div class="t">網頁入口<span class="pill new">新增</span></div><div class="d">獨立網址，不需要 LINE</div></div>
+        <div class="box new"><div class="t">App / 電話入口<span class="pill new">未來</span></div><div class="d">同一套核心，換一個外殼</div></div>
+      </div>
+      <div class="downarrow">↓ 全部說同一種語言（統一的 API 格式）↓</div>
+      <div class="row">
+        <div class="box core"><div class="t">身分層<span class="pill new">要改</span></div><div class="d">從「只認 LINE idToken」改成「認 LINE／認一般帳號／都可以」的抽象層</div></div>
+      </div>
+      <div class="row">
+        <div class="box core"><div class="t">語音對話引擎<span class="pill exist">既有</span></div><div class="d">xAI Realtime，負責聽、判斷欄位、追問</div></div>
+      </div>
+      <div class="row">
+        <div class="box new"><div class="t">資料清洗層<span class="pill new">新增</span></div><div class="d">同音字校正、電話/地址/日期格式正規化、必填完整性複檢</div></div>
+      </div>
+      <div class="row">
+        <div class="box core"><div class="t">結構化資料庫<span class="pill exist">既有＋擴充</span></div><div class="d">存「原始辨識結果」＋「清洗後結果」兩份，方便回頭比對清洗有沒有洗壞</div></div>
+        <div class="box new"><div class="t">RAG 知識庫（WeKnora）<span class="pill new">新增</span></div><div class="d">給語音助理查「這是什麼」「規則是什麼」這類開放問題用，跟收單資料庫是兩件事</div></div>
+      </div>
+      <div class="row">
+        <div class="box new"><div class="t">通知/回傳層<span class="pill new">新增</span></div><div class="d">原本寫死推 LINE，改成依使用者從哪個入口進來，回傳到對的地方（LINE 推播／網頁顯示／App 推播）</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">4</span>資料清洗層具體要做什麼</h2>
+    <table>
+      <tr><th>髒資料類型</th><th>清洗方式</th></tr>
+      <tr><td>人名同音錯字</td><td>比對「常用聯絡人清單」做校正（原本 member_aliases 那招，通用化保留）</td></tr>
+      <tr><td>電話格式不一</td><td>正規化成固定格式（去除空格/破折號，統一國碼或不加國碼的規則）</td></tr>
+      <tr><td>地址格式不一</td><td>基本結構化（縣市/區/路），至少能做去重比對</td></tr>
+      <tr><td>日期口語轉換</td><td>「下禮拜三」「後天」這類相對日期，語音當下已換算成 YYYY-MM-DD，清洗層只需再驗證格式合法</td></tr>
+      <tr><td>金額/數字單位</td><td>「三萬五」「35000」統一轉成數字，防止漏零多零</td></tr>
+      <tr><td>Email 格式</td><td>基本格式驗證（含 @、網域），不合法退回請使用者口頭重講</td></tr>
+    </table>
+    <div class="note">原始辨識結果跟清洗後結果都要留底，之後才有辦法回頭檢查「清洗規則是不是洗錯了」。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">5</span>多通路怎麼做，不用重寫</h2>
+    <ul>
+      <li>核心 API（收單、記憶、驗證）維持一套，不要為每個入口各寫一份</li>
+      <li>身分層抽成「介面」：LINE 用 idToken，網頁用一般帳密或簡訊驗證，都轉成同一種內部使用者代碼，後面的邏輯完全不用管「這人從哪裡來」</li>
+      <li>前端頁面可以有多份（LIFF 版、獨立網頁版），但呼叫的是同一組後端 API</li>
+      <li>通知回傳層依「使用者是從哪個入口登記的」決定推播管道，而不是寫死推 LINE</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">6</span>RAG 知識庫接在哪一層</h2>
+    <p style="font-size:13.5px">WeKnora 不是取代語音收單，是<b>加一條新能力</b>：使用者講話時如果問的是「規則是什麼」「這個要準備什麼」這類開放式問題（不是在填表單），語音助理可以查 WeKnora 知識庫回答，回答時附引用來源，不是瞎猜。這跟收單流程是平行的兩件事，共用同一個語音對話引擎、同一個身分層，但走不同的資料庫。</p>
+  </div>
+</div>
+</body>
+</html>

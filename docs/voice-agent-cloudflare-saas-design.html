@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Cloudflare SaaS 架構</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card:#ffffff; --ink:#1f2328; --muted:#6b7280;
+    --line:#e5e7eb; --accent:#2563eb; --accent-bg:#eff6ff;
+    --warn:#b45309; --warn-bg:#fffbeb; --ok:#15803d; --ok-bg:#f0fdf4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;line-height:1.6}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin-bottom:16px}
+  h2{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  h2 .n{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:6px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  code{background:#f1f2f4;padding:1px 6px;border-radius:4px;font-size:12.5px}
+  .note{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .compare{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;font-size:13px;margin-bottom:8px}
+  .compare div{padding:8px 10px;border-bottom:1px solid var(--line)}
+  .compare .head{font-weight:700;background:#fafafa;font-size:12px;color:var(--muted)}
+  .stack{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .layer{border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;background:#fafafa;
+    display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .layer .t{font-weight:700;font-size:13.5px}
+  .layer .d{font-size:12px;color:var(--muted)}
+  .layer .tag{background:var(--accent-bg);color:var(--accent);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Cloudflare SaaS 架構</h1>
+  <div class="sub">先破解一個誤解，再講怎麼架多租戶</div>
+
+  <div class="card">
+    <h2><span class="n">1</span>Cloudflare 不是只有靜態網頁</h2>
+    <p style="font-size:13.5px">Workers 本身就是後端。前面看到的語音驗證、收單、記憶存取，全部都是跑在 Workers 上的後端邏輯，不是靜態頁面能做的事。</p>
+    <div class="compare">
+      <div class="head"></div><div class="head">Vercel</div><div class="head">Cloudflare</div>
+      <div>靜態頁面</div><div>有</div><div>有（Pages / Workers Assets）</div>
+      <div>後端邏輯</div><div>Serverless Functions</div><div>Workers</div>
+      <div>資料庫</div><div>要外接，本身沒有</div><div>D1，內建就有</div>
+      <div>本質</div><div>沒有固定機器，請求來了才執行</div><div>一樣，沒有固定機器，請求來了才執行</div>
+    </div>
+    <div class="note">兩者是同一種東西（Serverless），不是「一個有 Server 一個沒有」。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>SaaS 版模組怎麼架</h2>
+    <div class="stack">
+      <div class="layer"><div><div class="t">後端邏輯</div><div class="d">Workers，已經在用</div></div><div class="tag">每支 API 先解析「這是哪個客戶」</div></div>
+      <div class="layer"><div><div class="t">結構化資料</div><div class="d">D1</div></div><div class="tag">每張表加 tenant_id，每次查詢都帶這個過濾</div></div>
+      <div class="layer"><div><div class="t">暫存</div><div class="d">KV</div></div><div class="tag">key 前面加租戶代碼，例如 tenantA:xxx</div></div>
+      <div class="layer"><div><div class="t">向量知識庫</div><div class="d">Vectorize</div></div><div class="tag">metadata 帶 tenant_id，查詢時用這個過濾</div></div>
+      <div class="layer"><div><div class="t">靜態前端</div><div class="d">Pages 或 Workers Assets</div></div><div class="tag">全租戶共用同一套介面，內容依登入者動態帶出</div></div>
+      <div class="layer"><div><div class="t">客戶對照表</div><div class="d">D1 新增一張表</div></div><div class="tag">存誰是誰的客戶、用哪個方案</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span>一句話</h2>
+    <p style="font-size:13.5px">不用另外找地方架 Server，Workers 就是 Server。做 SaaS 需要的只是在現有這些模組裡，每個地方都多帶一個「這是哪個客戶」的標籤，不是換一套技術。</p>
+  </div>
+</div>
+</body>
+</html>

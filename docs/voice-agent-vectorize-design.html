@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Vectorize 知識庫模組設計</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card:#ffffff; --ink:#1f2328; --muted:#6b7280;
+    --line:#e5e7eb; --accent:#2563eb; --accent-bg:#eff6ff;
+    --warn:#b45309; --warn-bg:#fffbeb; --ok:#15803d; --ok-bg:#f0fdf4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;line-height:1.6}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin-bottom:16px}
+  h2{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  h2 .n{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:6px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;width:70px}
+  code{background:#f1f2f4;padding:1px 6px;border-radius:4px;font-size:12.5px}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+  .step{background:var(--accent-bg);border:1px solid #bfdbfe;border-radius:8px;
+    padding:8px 12px;font-size:13px;min-width:110px}
+  .step.db{background:var(--ok-bg);border-color:#bbf7d0}
+  .arrow{color:var(--muted);font-size:16px}
+  .note{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .warnbox{background:var(--warn-bg);border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-top:10px}
+  .warnbox b{color:var(--warn)}
+  ul{margin:6px 0;padding-left:20px;font-size:13.5px}
+  li{margin:3px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Vectorize 知識庫模組設計</h1>
+  <div class="sub">怎麼把「向量搜尋」這塊接進 Cloudflare 架構</div>
+
+  <div class="card">
+    <h2><span class="n">1</span>先講清楚 Vectorize 的角色</h2>
+    <p style="font-size:13.5px">Vectorize 只做一件事：<b>拿一段文字的向量，找出資料庫裡最相近的其他向量</b>。它不存原文、不會關鍵字比對。這兩件事要另外接。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>開一個獨立的索引，跟現有的分開</h2>
+    <table>
+      <tr><th>現有</th><td><code>CATEGORY_INDEX</code>：比對固定類別清單用，資料很少變動</td></tr>
+      <tr><th>新增</th><td><code>KNOWLEDGE_INDEX</code>：知識庫問答用，內容會持續新增/更新</td></tr>
+    </table>
+    <div class="note">分開的原因：用途不同、metadata 格式不同，以後要重建其中一個索引時不會互相干擾。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span>資料寫入路徑（文件怎麼進去）</h2>
+    <div class="flow">
+      <div class="step">文件進來<br><span style="font-size:11px;color:#6b7280">先支援純文字/Markdown</span></div><div class="arrow">→</div>
+      <div class="step">依段落切塊<br><span style="font-size:11px;color:#6b7280">保留標題層級</span></div><div class="arrow">→</div>
+      <div class="step">轉向量<br><span style="font-size:11px;color:#6b7280">bge-m3，分批 20 筆</span></div><div class="arrow">→</div>
+      <div class="step db">寫入 Vectorize</div>
+    </div>
+    <div class="flow">
+      <div class="step db" style="margin-left:0">同一批 chunk 原文</div><div class="arrow">→</div>
+      <div class="step db">另存一份到 D1</div>
+    </div>
+    <div class="warnbox"><b>重要：</b>Vectorize 只適合當索引，不能當主要資料庫。原文一定要在 D1 也留一份，查到向量比對結果後，要靠這份原文才能真正組出回答內容。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">4</span>查詢路徑（怎麼被找到）</h2>
+    <div class="flow">
+      <div class="step">使用者問題</div><div class="arrow">→</div>
+      <div class="step">轉向量<br><span style="font-size:11px;color:#6b7280">同一個 bge-m3</span></div><div class="arrow">→</div>
+      <div class="step">Vectorize 查詢<br><span style="font-size:11px;color:#6b7280">拿一批相近候選</span></div>
+    </div>
+    <div class="flow">
+      <div class="step" style="margin-left:0">同一個問題</div><div class="arrow">→</div>
+      <div class="step">D1 關鍵字比對<br><span style="font-size:11px;color:#6b7280">Vectorize 沒有這功能</span></div><div class="arrow">→</div>
+      <div class="step">拿另一批候選</div>
+    </div>
+    <div class="flow">
+      <div class="step">兩批候選</div><div class="arrow">→</div>
+      <div class="step">RRF 公式合併排序<br><span style="font-size:11px;color:#6b7280">純數學，寫在程式裡</span></div><div class="arrow">→</div>
+      <div class="step db">前幾筆組成回答依據</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">5</span>一開始就要定死、事後改不了的事</h2>
+    <ul>
+      <li>建索引時要先指定「向量維度」，要跟選用模型輸出的維度一致（bge-m3 固定輸出一種維度）</li>
+      <li>中途想換模型 → 新模型輸出維度通常不同 → 舊向量全部作廢，要整個重新跑一次「文件進來」那條路徑重建</li>
+      <li>所以模型選定後盡量不要中途換，除非有心理準備要重建</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

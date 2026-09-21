@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Voice Agent 架構盤點</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card:#ffffff; --ink:#1f2328; --muted:#6b7280;
+    --line:#e5e7eb; --accent:#2563eb; --accent-bg:#eff6ff;
+    --warn:#b45309; --warn-bg:#fffbeb; --ok:#15803d; --ok-bg:#f0fdf4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;line-height:1.6}
+  .wrap{max-width:920px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin-bottom:16px}
+  h2{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  h2 .n{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:6px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  code{background:#f1f2f4;padding:1px 6px;border-radius:4px;font-size:12.5px}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 16px}
+  .step{background:var(--accent-bg);border:1px solid #bfdbfe;border-radius:8px;
+    padding:8px 12px;font-size:13px;min-width:120px}
+  .arrow{color:var(--muted);font-size:16px}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+  .tag.keep{background:var(--ok-bg);color:var(--ok)}
+  .tag.cut{background:var(--warn-bg);color:var(--warn)}
+  ul{margin:6px 0;padding-left:20px;font-size:13.5px}
+  li{margin:3px 0}
+  .note{font-size:12.5px;color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Voice Agent 架構盤點</h1>
+  <div class="sub">從舊系統抽出的語音收單功能，整理給接手的 Agent 看資料庫、LIFF、LINE 怎麼串起來。內文已避開組織名稱，只保留技術結構。</div>
+
+  <div class="card">
+    <h2><span class="n">1</span>整體流程</h2>
+    <div class="flow">
+      <div class="step">使用者在 LINE 對話框打開連結</div><div class="arrow">→</div>
+      <div class="step">LIFF 語音頁面（網頁）</div><div class="arrow">→</div>
+      <div class="step">跟後端換一組短效期語音金鑰</div><div class="arrow">→</div>
+      <div class="step">瀏覽器直連語音 AI 即時通話</div>
+    </div>
+    <div class="flow">
+      <div class="step">語音 AI 判斷欄位填完</div><div class="arrow">→</div>
+      <div class="step">呼叫後端「送出」API</div><div class="arrow">→</div>
+      <div class="step">寫回資料庫 / 推播確認</div>
+    </div>
+    <div class="note">語音 AI 引擎：xAI Realtime API。前端瀏覽器直接跟語音 AI 對話，後端只負責「發語音通行證」跟「收最終結果」，通話過程本身不經過後端。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>LIFF 前端怎麼架在 LINE 裡</h2>
+    <ul>
+      <li>LINE 官方帳號的選單／訊息裡放一個 LIFF 網址，點開會在 LINE App 內建瀏覽器打開一個網頁</li>
+      <li>網頁載入時用 <code>LIFF SDK</code> 拿到這個使用者的 <code>lineUserId</code> 跟一個一次性 <code>idToken</code>（證明「這真的是這個人在操作」）</li>
+      <li>網頁前端檔案：語音收單頁面本體 + 共用前端邏輯 + 表單欄位定義（放在前端也放在後端，兩邊要對齊）</li>
+      <li>每一支後端 API 都要求帶 <code>lineUserId + idToken</code>，後端會拿 idToken 去跟 LINE 官方驗證「這組 token 真的對應這個 lineUserId」，防止有人冒充別人的身分打 API</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span>後端 API 路由</h2>
+    <table>
+      <tr><th>路徑</th><th>做什麼</th><th>狀態</th></tr>
+      <tr><td><code>POST /api/voice-session/token</code></td>
+        <td>驗證身分 → 跟語音 AI 服務商換一組 15 分鐘的通行證，回傳給前端。同時把「這個人的聯絡人別名清單」「上次記住的常用資料」一起塞給前端，讓語音 AI 開場就有上下文</td>
+        <td><span class="tag keep">保留</span></td></tr>
+      <tr><td><code>POST /api/voice-intake/submit</code></td>
+        <td>語音 AI 判斷資料收集完整後呼叫，把結構化欄位送回來</td>
+        <td><span class="tag cut">內部轉發到別的服務，要改成直接寫自己的資料庫</span></td></tr>
+      <tr><td><code>POST /api/voice-intake/remember</code></td>
+        <td>使用者說「幫我記住電話/信箱/地址」時呼叫，白名單只允許這三種欄位，單筆長度上限 500 字</td>
+        <td><span class="tag keep">保留</span></td></tr>
+      <tr><td><code>POST /api/internal/voice-intake</code></td>
+        <td>備用路徑，設計給語音 AI 服務商後台直連（不經過 LIFF 前端），目前沒在正式使用</td>
+        <td><span class="tag keep">可保留，設計備用</span></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">4</span>資料庫（原本用 Cloudflare D1，SQLite 相容）</h2>
+    <table>
+      <tr><th>資料表</th><th>欄位</th><th>用途</th></tr>
+      <tr><td><code>line_user_memory</code></td>
+        <td>line_user_id, field_key, field_value, updated_at</td>
+        <td>記住使用者的電話/信箱/地址，下次開口說「用我的電話」直接代入</td></tr>
+      <tr><td><code>line_user_profiles</code></td>
+        <td>line_user_id, last_known_display_name, last_seen_at</td>
+        <td>使用者基本資料快取</td></tr>
+      <tr><td><code>member_aliases</code>（要重新命名）</td>
+        <td>姓名清單</td>
+        <td>語音辨識常把人名聽成同音錯字，先把「可能會被提到的人名清單」餵給語音 AI 校正。獨立系統要換成通用的「聯絡人／常用名單」概念，不綁特定組織的會員名冊</td></tr>
+    </table>
+    <div class="note">另外有一個 KV（key-value 暫存），存 <code>voice-intake:active-user</code>，只在上面「備用路徑」那條線用，記錄「目前是哪個使用者在講話」，處理完就刪除。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">5</span>語音表單設計（4 種表單類型，用 function calling）</h2>
+    <ul>
+      <li>語音 AI 用三個「工具」跟後端互動：<code>finish_current_entry</code>（存這一筆）、<code>submit_voice_intake</code>（全部送出）、<code>remember_info</code>（記住聯絡資料）</li>
+      <li>每種表單類型定義自己的必填欄位（例如：對象姓名、日期、地點、聯絡電話等），AI 靠使用者講話內容自動判斷是哪一種表單，不用使用者自己選</li>
+      <li>支援一次講多筆（例如連續講好幾位聯絡人），排隊依序處理</li>
+      <li>系統會給 AI 一段「人設指令」，規定用繁體中文對話、一次只問一題、欄位確認方式、不能自己編日期等規則</li>
+    </ul>
+    <div class="note">這 4 種表單類型本身是原系統的業務模板（聯誼會的商務往來紀錄），獨立系統要不要保留一樣的表單種類、或改成通用聯絡表單，是接手 Agent 要決定的設計題，這份盤點不含這個決策。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">6</span>外部依賴清單</h2>
+    <table>
+      <tr><th>依賴</th><th>用途</th></tr>
+      <tr><td>xAI Realtime API</td><td>語音對話引擎本體，前端瀏覽器直連，用短效期 client secret 授權</td></tr>
+      <tr><td>LINE LIFF SDK + LINE 身分驗證</td><td>取得使用者身分、在 LINE App 內嵌瀏覽器打開網頁</td></tr>
+      <tr><td>原本的訊息推播服務（要拔掉）</td><td>語音收單完成後推播確認訊息，這條線要換成獨立系統自己的通知方式，或先只落地資料庫</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">7</span>接手前要決定的事</h2>
+    <ul>
+      <li>語音收單完成後的資料要存哪裡（目前是轉發給別的服務，這條線需要換掉）</li>
+      <li>「聯絡人別名清單」這個概念要不要保留，資料從哪裡來</li>
+      <li>4 種表單類型要原封不動，還是簡化成通用一種</li>
+      <li>通知使用者「已收到」的方式（原本靠 LINE 推播，獨立系統要另外設計）</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>語音助理</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --text: #1f2937;
+      --subtext: #6b7280;
+      --primary: #06c755;
+      --primary-dark: #05a648;
+      --danger: #dc2626;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 1.1rem;
+      margin: 0 0 4px 0;
+      color: #111827;
+    }
+    .subtitle {
+      font-size: 0.8rem;
+      color: var(--subtext);
+    }
+    .stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    .orb-wrap {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+    .orb {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #34d399, var(--primary) 60%, var(--primary-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(6,199,85,0.35);
+      transition: transform 0.15s ease-out;
+      cursor: pointer;
+      border: none;
+    }
+    .orb svg { width: 52px; height: 52px; fill: #fff; }
+    .orb.listening { animation: pulse 1.4s ease-in-out infinite; }
+    .orb.speaking { animation: speak 0.5s ease-in-out infinite alternate; }
+    .orb.idle { filter: grayscale(0.5); opacity: 0.85; }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 6px 20px rgba(6,199,85,0.35); }
+      50% { box-shadow: 0 6px 32px rgba(6,199,85,0.7); }
+    }
+    @keyframes speak {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
+    }
+    .status-text {
+      font-size: 0.95rem;
+      color: var(--subtext);
+      text-align: center;
+      min-height: 1.4em;
+    }
+    .transcript {
+      width: 100%;
+      max-width: 480px;
+      max-height: 40vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bubble {
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      max-width: 85%;
+      word-break: break-word;
+    }
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble.agent {
+      align-self: flex-start;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .text-input-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 480px;
+      margin-top: 8px;
+    }
+    .text-input-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: var(--card-bg);
+    }
+    .text-input-row input:disabled,
+    .text-input-row button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .text-input-row button {
+      flex-shrink: 0;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding-top: 12px;
+    }
+    button.secondary {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--subtext);
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    button.retry {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+    }
+    .fallback-box, .completion-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+    }
+    .fallback-box p, .completion-box p { margin: 0 0 16px 0; font-size: 0.95rem; }
+    .completion-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎙️ 語音填單</h1>
+    <p class="subtitle">用講的，快速完成資料收集</p>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="orb-wrap">
+      <button class="orb idle" id="orb-btn" aria-label="開始語音對話">
+        <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3zm5-3a1 1 0 00-2 0 3 3 0 01-6 0 1 1 0 00-2 0 5 5 0 004.5 4.9V18H9a1 1 0 000 2h6a1 1 0 000-2h-2.5v-2.1A5 5 0 0017 11z"/></svg>
+      </button>
+    </div>
+    <div class="status-text" id="status-text">點一下開始說話</div>
+    <div class="transcript" id="transcript"></div>
+    <div class="text-input-row" id="text-input-row">
+      <input id="text-input-field" type="text" placeholder="連線後可以直接打字" disabled autocomplete="off" />
+      <button type="button" id="text-input-send-btn" disabled>送出</button>
+    </div>
+  </div>
+
+  <div class="completion-box" id="completion-box" hidden>
+    <p id="completion-text">資料已經整理好了，請回 LINE 確認後送出。</p>
+    <div class="completion-actions">
+      <button class="primary" id="view-form-btn">查看表單</button>
+      <button class="secondary" id="text-entry-btn">文字填寫</button>
+    </div>
+    <div class="completion-error" id="completion-error" hidden>
+      <p id="completion-error-text" style="color: var(--danger, #dc2626); margin: 8px 0;">訊息傳送失敗，請重新嘗試。</p>
+      <button class="retry" id="completion-retry-btn">重試</button>
+    </div>
+    <div class="completion-desktop-hint" id="completion-desktop-hint" hidden>
+      <p id="completion-desktop-hint-text" style="color: var(--subtext); margin: 8px 0;"></p>
+    </div>
+  </div>
+
+  <div class="fallback-box" id="fallback-box" hidden>
+    <p id="fallback-text">語音功能暫時無法使用。</p>
+    <button class="retry" id="fallback-retry">重新嘗試</button>
+  </div>
+
+  <footer>
+    <button class="secondary" id="cancel-btn">改用文字填表單</button>
+  </footer>
+
+  <script type="module" src="voice-intake.js"></script>
+</body>
+</html>
