@@ -57,11 +57,43 @@ async function verifyLineIdentity(idToken, env, claimedLineUserId) {
   }
 }
 
+const CUSTOMER_PROFILE_LIMITS = Object.freeze({
+  display_name: 40,
+  member_tier: 20,
+  notes: 200,
+  last_order_summary: 200,
+});
+
+function limitCustomerProfileField(value, maxLength) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') return null;
+  return value.slice(0, maxLength);
+}
+
+// 只回傳客戶檔的已定義欄位；line_user_id 留在查詢條件，不進回應物件。
+export async function getCustomerProfile(env, lineUserId) {
+  if (!env?.DB || typeof lineUserId !== 'string' || !lineUserId.trim()) return null;
+  const { results } = await env.DB.prepare(
+    `SELECT display_name, member_tier, notes, last_order_summary, extra_json
+     FROM customer_profiles WHERE line_user_id = ?`
+  ).bind(lineUserId).all();
+  const row = results?.[0];
+  if (!row) return null;
+  return {
+    display_name: limitCustomerProfileField(row.display_name, CUSTOMER_PROFILE_LIMITS.display_name),
+    member_tier: limitCustomerProfileField(row.member_tier, CUSTOMER_PROFILE_LIMITS.member_tier),
+    notes: limitCustomerProfileField(row.notes, CUSTOMER_PROFILE_LIMITS.notes),
+    last_order_summary: limitCustomerProfileField(row.last_order_summary, CUSTOMER_PROFILE_LIMITS.last_order_summary),
+    // extra_json 仍可供前端保存原始欄位，但 buildCustomerProfileHint 永遠不會把它送進 prompt。
+    extra_json: typeof row.extra_json === 'string' ? row.extra_json : null,
+  };
+}
+
 // ---------- 語音 session：跟 xAI 換一組短效期通行證 ----------
 async function handleVoiceSessionToken(request, env) {
   const { lineUserId, idToken } = await readJsonObject(request);
   if (!lineUserId) return json({ error: 'Missing lineUserId' }, 400);
-  if (!idToken) return json({ error: 'idToken required' }, 400);
+  if (!idToken) return json({ error: 'idToken required' }, 401);
 
   const identity = await verifyLineIdentity(idToken, env, lineUserId);
   if (!identity.ok) return json({ error: identity.error }, identity.status);
@@ -113,7 +145,14 @@ async function handleVoiceSessionToken(request, env) {
       savedMemory = {};
     }
 
-    return json({ clientSecret: data.value, expiresAt: data.expires_at, memberNames, savedMemory }, 200);
+    let customerProfile = null;
+    try {
+      customerProfile = await getCustomerProfile(env, lineUserId);
+    } catch (profileError) {
+      console.error('handleVoiceSessionToken: failed to get customer profile', profileError?.message || profileError);
+    }
+
+    return json({ clientSecret: data.value, expiresAt: data.expires_at, memberNames, savedMemory, customerProfile }, 200);
   } catch (error) {
     console.error('handleVoiceSessionToken: xAI request threw', error?.message || error);
     return json({ error: 'voice_session_unavailable' }, 502);

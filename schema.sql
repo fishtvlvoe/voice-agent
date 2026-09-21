@@ -33,3 +33,14 @@ CREATE TABLE IF NOT EXISTS contacts (
   aliases TEXT,
   updated_at INTEGER
 );
+
+-- customer_profiles：開通語音 session 時預載的客戶檔；不直接把內部識別欄位放進 prompt。
+CREATE TABLE IF NOT EXISTS customer_profiles (
+  line_user_id TEXT PRIMARY KEY,
+  display_name TEXT CHECK (display_name IS NULL OR length(display_name) <= 40),
+  member_tier TEXT CHECK (member_tier IS NULL OR length(member_tier) <= 20),
+  notes TEXT CHECK (notes IS NULL OR length(notes) <= 200),
+  last_order_summary TEXT CHECK (last_order_summary IS NULL OR length(last_order_summary) <= 200),
+  extra_json TEXT,
+  updated_at INTEGER NOT NULL
+);
