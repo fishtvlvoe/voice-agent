@@ -316,7 +316,7 @@ async function dispatch(request, env) {
   if (url.pathname === '/api/voice-intake/submit' && request.method === 'POST') return handleVoiceIntakeSubmitFromLiff(request, env);
   if (url.pathname === '/api/voice-intake/remember' && request.method === 'POST') return handleVoiceIntakeRemember(request, env);
   if (url.pathname === '/api/internal/memory' && request.method === 'GET') return handleGetUserMemory(request, env);
-  if (url.pathname === '/api/internal/memory' && request.method === 'POST') return handleUpsertUserMemory(request, env);
+  if (url.pathname === '/voice-intake') return env.ASSETS.fetch(new Request(new URL('/voice-intake.html', request.url), request));
   if (env.ASSETS) return env.ASSETS.fetch(request);
   return json({ error: 'not_found' }, 404);
 }

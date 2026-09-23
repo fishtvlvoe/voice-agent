@@ -5,3 +5,6 @@ node_modules/
 
 # Spectra app data
 .spectra/
+
+# Sensitive resource credentials
+resource-ids.md

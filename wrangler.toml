@@ -10,8 +10,8 @@ binding = "ASSETS"
 # 部署前用 `wrangler d1 create voice-agent-db` 建立，把回傳的 database_id 貼進來。
 [[d1_databases]]
 binding = "DB"
-database_name = "voice_agent_db"
-database_id = ""
+database_name = "voice-agent-db"
+database_id = "4f90a993-2db2-41d2-97b2-a7db6acac4ca"
 
 # 知識庫問答用的向量索引，部署前用 `wrangler vectorize create` 建立。
 # [[vectorize]]
