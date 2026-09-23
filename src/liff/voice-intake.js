@@ -49,6 +49,7 @@ const completionDesktopHintText = el('completion-desktop-hint-text');
 const textInputField = el('text-input-field');
 const textInputSendBtn = el('text-input-send-btn');
 let lastActionText = null;
+let lastRealtimeError = null;
 
 function setTextInputEnabled(enabled) {
   textInputField.disabled = !enabled;
@@ -857,6 +858,7 @@ function handleServerEvent(event) {
     }
     case 'error':
       console.error('xAI realtime error event', event);
+      lastRealtimeError = event.error?.message || (typeof event.error === 'string' ? event.error : JSON.stringify(event.error || event));
       turnInProgress = false;
       clearTurnWatch();
       break;
@@ -941,10 +943,10 @@ function sessionInstructions() {
   return parts.join('\n');
 }
 
-function failSession() {
+function failSession(detailText = null) {
   cleanupSession();
   orbBtn.disabled = false;
-  showFallback(FAIL_SESSION_TEXT);
+  showFallback(detailText ? `${FAIL_SESSION_TEXT} ${detailText}` : FAIL_SESSION_TEXT);
 }
 
 function activatePendingSocket(socket, ticket, generation, old) {
@@ -990,7 +992,7 @@ function connectSession(ticket, generation) {
   const socket = new WebSocket(REALTIME_URL, [`xai-client-secret.${ticket.clientSecret}`]);
   pendingWs = socket;
   connectionTimer = setTimeout(() => {
-    if (pendingWs === socket) failSession();
+    if (pendingWs === socket) failSession('(code: timeout, reason: 連線握手逾時20秒)');
   }, 20000);
   socket.onopen = () => {
     if (sessionEnded || generation !== sessionGeneration) { socket.close(); return; }
@@ -1028,10 +1030,10 @@ function connectSession(ticket, generation) {
       }
     } catch (err) {
       console.error('parse realtime event failed', err);
-      failSession();
+      failSession(`(code: parse_err, reason: ${err?.message || err})`);
     }
   };
-  socket.onerror = socket.onclose = () => {
+  socket.onerror = socket.onclose = (event) => {
     if (sessionEnded || submitted) {
       setTextInputEnabled(false);
       return;
@@ -1044,7 +1046,11 @@ function connectSession(ticket, generation) {
       renewSession(generation);
       return;
     }
-    if (socket === ws || socket === pendingWs) failSession();
+    if (socket === ws || socket === pendingWs) {
+      const code = event?.code !== undefined ? event.code : (event?.type === 'error' ? 'error' : '無');
+      const reason = event?.reason || lastRealtimeError || '無';
+      failSession(`(code: ${code}, reason: ${reason})`);
+    }
   };
 }
 
@@ -1071,6 +1077,7 @@ async function renewSession(generation) {
 }
 
 async function startVoiceSession() {
+  lastRealtimeError = null;
   const generation = ++sessionGeneration;
   sessionEnded = false;
   submitted = false;
