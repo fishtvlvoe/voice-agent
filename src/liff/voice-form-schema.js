@@ -1,7 +1,7 @@
 // 語音助理要收集哪些欄位、講什麼人設，全部寫在這份設定檔，不寫死在程式邏輯裡。
 // 依實際用途替換 VOICE_FORMS / descriptions / AGENT_INSTRUCTIONS 即可，不用動 voice-intake.js。
 export const VOICE_FORMS = {
-  generic_intake: ['contactName', 'topic', 'detail', 'phone', 'email'],
+  generic_intake: ['topic', 'detail'],
 };
 
 export const VOICE_OPTIONAL_FIELDS = {
@@ -9,11 +9,8 @@ export const VOICE_OPTIONAL_FIELDS = {
 };
 
 const descriptions = {
-  contactName: '對方姓名',
   topic: '這次要記錄的主題',
   detail: '詳細內容',
-  phone: '聯絡電話',
-  email: '聯絡 Email',
   note: '備註（選填）',
 };
 
