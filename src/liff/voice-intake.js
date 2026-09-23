@@ -1133,10 +1133,16 @@ document.addEventListener('visibilitychange', () => {
 });
 
 (async () => {
+  setStatus('身分驗證中…');
   const ok = await initLiff();
   if (!ok) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showFallback('這個瀏覽器不支援語音輸入，請改用文字填表單。');
     return;
   }
+  // initLiff() 是非同步（要跟 LINE 伺服器換身分），在這之前 lineUserId/idToken
+  // 還是 null。按鈕原本沒鎖，手速快的使用者會在身分資料備妥前就點下去，
+  // 後端收到空值直接回 400（2026-09-23 真人實測抓到的真正原因）。
+  orbBtn.disabled = false;
+  setStatus('點一下開始說話');
 })();
