@@ -39,6 +39,15 @@
       font-size: 1.1rem;
       margin: 0 0 4px 0;
       color: #111827;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .title-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--primary);
     }
     .subtitle {
       font-size: 0.8rem;
@@ -202,7 +211,10 @@
 </head>
 <body>
   <header>
-    <h1>🎙️ 語音填單</h1>
+    <h1>
+      <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+      <span>語音填單</span>
+    </h1>
     <p class="subtitle">用講的，快速完成資料收集</p>
   </header>
 
