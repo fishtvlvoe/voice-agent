@@ -1072,7 +1072,9 @@ async function renewSession(generation) {
       recoverAfterStaleIdToken();
       return;
     }
-    if (generation === sessionGeneration && !sessionEnded) failSession();
+    if (generation === sessionGeneration && !sessionEnded) {
+      failSession(`(code: renew-fail, reason: ${err?.message || err?.name || '無'})`);
+    }
   }
 }
 
@@ -1099,7 +1101,9 @@ async function startVoiceSession() {
       recoverAfterStaleIdToken();
       return;
     }
-    if (generation === sessionGeneration) failSession();
+    if (generation === sessionGeneration) {
+      failSession(`(code: start-fail, reason: ${err?.name || err?.message || String(err) || '無'})`);
+    }
   }
 }
 
