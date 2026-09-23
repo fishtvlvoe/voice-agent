@@ -1102,7 +1102,7 @@ async function startVoiceSession() {
       return;
     }
     if (generation === sessionGeneration) {
-      failSession(`(code: start-fail, reason: ${err?.name || err?.message || String(err) || '無'})`);
+      failSession(`(code: start-fail, reason: ${err?.name || 'Error'}: ${err?.message || String(err) || '無'}, stack: ${(err?.stack || '').slice(0, 200)})`);
     }
   }
 }
