@@ -488,7 +488,7 @@ async function fetchClientSecret() {
       // 確認這個 request 還是當前 session，才觸發重新驗證（避免晚到的舊 401 強制整頁登入）。
       throw err;
     }
-    throw new Error(`voice-session/token HTTP ${res.status}`);
+    throw new Error(`voice-session/token HTTP ${res.status} body=${body?.error || '無'} hasLineUserId=${!!lineUserId} hasIdToken=${!!idToken}`);
   }
   const data = await res.json();
   if (!data.clientSecret || !Number.isFinite(data.expiresAt) || data.expiresAt * 1000 <= Date.now() + 30000) {
