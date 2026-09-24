@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-24
+updated: 2026-09-25
 sop: dev-sop
 lifecycle_stage: D1
 current_stage: P5
@@ -27,11 +27,15 @@ status: P5 驗收中；合成 Webhook RED 已定位到 LINE 回覆邊界；待�
 - [FACT] 資源登錄已集中到本機 `voice-agent/.env`（權限 600、已加入 `.gitignore`）；Cloudflare Workers 部署 token 仍只存於 `/Users/fishtv/Development/.env`。
 - [FACT] LINE webhook URL 已設定為 `https://voice-agent.fishandy1213.workers.dev/webhook/line`，LINE API 回讀 `active=true`；LINE webhook test 回傳 `success=true`、`statusCode=200`。（日期：2026-09-24）
 - [FACT] 直接呼叫 xAI Chat Completions（`grok-4.7`）回傳 200；本機 14/14 測試通過。（日期：2026-09-25）
+- [FACT] `voice-agent` 文字聊天目前使用 xAI Chat Completions；程式以 `env.XAI_TEXT_MODEL || 'grok-4.7'` 選模型，本機 `.env` 沒有設定 `XAI_TEXT_MODEL` 覆寫。（證據：`src/line-chat.js`、`wrangler.toml`）
+- [FACT] BNI 另一個專案的產業語意分類使用 Gemini `gemini-3.5-flash-lite`；這不是 `voice-agent` 目前的文字模型。（證據：`/Users/fishtv/Development/C-客戶專案/bni/code/workers/bni-connector/src/gemini-category-matcher.js`）
 - [FACT] 合成 RED 使用合法 LINE 簽章與假 reply token 呼叫正式 Worker，回傳 `500 internal_error`；Worker 日誌顯示 xAI 路徑完成後 `sendLineReply failed 400`，證明合成事件已走到 LINE 回覆邊界。（日期：2026-09-25）
 - [FACT] LINE 官方 Webhook Test 實際從 LINE Corporation 送達新版 Worker，API 回傳 `statusCode=200`；Worker 日誌確認簽章通過、`eventCount=0`、`handled=0`。（日期：2026-09-25）
 - [FACT] 原因已確認：舊版同步等待 xAI 約 5～15 秒才回 Webhook；新版合成文字事件回 `200 {"ok":true,"queued":1}`，耗時約 0.26 秒，背景處理再因假 reply token 收到 LINE `400`。（日期：2026-09-25）
 - [DECISION] 產品方向是：LINE 文字與語音共用同一個個人記憶大腦，並能把整理結果送到 email、記帳系統或電腦／雲端 AI。（日期：2026-09-24；來源：使用者需求）
 - [DECISION] 第一個施工範圍是：LINE 文字聊天＋共用記憶／知識查詢；暫不切換 OpenAI/Ringg，也暫不做 email、記帳、電腦／雲端 AI connector。（日期：2026-09-24；來源：使用者確認）
+- [DECISION] 個人記憶採「AI 先偵測候選內容 → 先詢問使用者 → 使用者明確同意後才儲存」；禁止 AI 靜默保存姓名、偏好、記事或提醒。（日期：2026-09-25；來源：使用者確認；尚未施工）
+- [DECISION] LINE Push API 只是傳送管道；產生文字與記憶候選判斷才會產生模型費用，D1 寫入本身不另收語言模型費用。（日期：2026-09-25；來源：使用者確認方向）
 
 ## 尚未確認
 
@@ -47,8 +51,8 @@ status: P5 驗收中；合成 Webhook RED 已定位到 LINE 回覆邊界；待�
 - P3：第一個施工範圍已確認，保存政策與第一個外部 connector 延後。
 - P4：已新增 LINE Webhook、xAI Chat Completions、reply/push fallback、共用歷史／知識工具、文件切塊與知識匯入端點；語音與文字共用後端查詢函式。
 - P4 驗證：14/14 focused tests 通過；D1 `knowledge_chunks` 已遠端套用；Vectorize 建立完成；Worker 已部署；遠端匯入 smoke test 通過。
-- P5：正式環境驗收中；LINE 平台傳輸邊界與非同步 ACK 已完成，真人 LINE 訊息事件與回覆畫面仍未取得證據。
+- P5：LINE 平台傳輸邊界、非同步 ACK 與真人文字回覆已完成驗收；個人記憶的「先詢問、確認後儲存」仍待另立施工規格。
 
 ## 下一步
 
-下一步在即時 `wrangler tail` 監看時用測試帳號傳一則文字；若沒有 `text event` 日誌，改查使用者是否在正確官方帳號的一對一聊天室送出訊息；若有事件，再依 reply API 狀態修正。
+下一步先把「候選記憶分類、確認問句、使用者同意後寫入」拆成規格；目前不擴大到自動提醒排程或外部 connector。
