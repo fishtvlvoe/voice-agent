@@ -117,6 +117,34 @@ export const REMEMBER_TOOL = {
   },
 };
 
+export const QUERY_VOICE_INTAKE_HISTORY_TOOL = {
+  type: 'function',
+  name: 'query_voice_intake_history',
+  description: '查詢這位使用者最近記錄過的語音或文字資料。只有使用者詢問過去記錄時使用。',
+  parameters: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      limit: { type: 'integer', minimum: 1, maximum: 10 },
+    },
+    required: [],
+  },
+};
+
+export const QUERY_KNOWLEDGE_BASE_TOOL = {
+  type: 'function',
+  name: 'query_knowledge_base',
+  description: '從已上傳的知識庫文件查找答案依據。查無相關資料時必須明確說不知道。',
+  parameters: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      query: { type: 'string', minLength: 1, maxLength: 1000 },
+    },
+    required: ['query'],
+  },
+};
+
 export const AGENT_INSTRUCTIONS = [
   '你是一個語音助理，負責用對話方式收集使用者提供的資訊，並整理成結構化欄位。',
   '一律使用繁體中文對話，絕對不可以先用英文開場或回答。語氣自然簡短，一次只問一個問題。',

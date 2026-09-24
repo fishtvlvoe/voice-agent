@@ -11,16 +11,18 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "voice_agent_db"
-database_id = ""
+database_id = "4f90a993-2db2-41d2-97b2-a7db6acac4ca"
 
-# 知識庫問答用的向量索引，部署前用 `wrangler vectorize create` 建立。
-# [[vectorize]]
-# binding = "KNOWLEDGE_INDEX"
-# index_name = "voice-agent-knowledge-index"
+# 知識庫問答用的向量索引；正式建立前先確認 bge-m3 的向量維度。
+[[vectorize]]
+binding = "KNOWLEDGE_INDEX"
+index_name = "voice-agent-knowledge-index"
 
 [ai]
 binding = "AI"
 
 [vars]
 # LIFF_ID: 請用 `wrangler secret put LIFF_ID` 設定（你的 LINE LIFF App ID）
-# XAI_API_KEY: 請用 `wrangler secret put XAI_API_KEY` 設定（xAI Realtime API 金鑰）
+# XAI_API_KEY: 請用 `wrangler secret put XAI_API_KEY` 設定（xAI API 金鑰）
+# XAI_TEXT_MODEL: 未設定時使用 grok-4.7；需要固定版本時再明確設定。
+# LINE_CHANNEL_ACCESS_TOKEN、LINE_CHANNEL_SECRET、KNOWLEDGE_INGEST_TOKEN 請用 secret put 設定。

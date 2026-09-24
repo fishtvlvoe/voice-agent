@@ -44,3 +44,14 @@ CREATE TABLE IF NOT EXISTS customer_profiles (
   extra_json TEXT CHECK (extra_json IS NULL OR length(extra_json) <= 2000),
   updated_at INTEGER NOT NULL
 );
+
+-- knowledge_chunks：知識庫原文；向量索引只存向量與 chunk id，回答時回 D1 取原文。
+CREATE TABLE IF NOT EXISTS knowledge_chunks (
+  id TEXT PRIMARY KEY,
+  chunk_text TEXT NOT NULL,
+  source_doc TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_source_doc
+  ON knowledge_chunks (source_doc);

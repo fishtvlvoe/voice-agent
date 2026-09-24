@@ -10,6 +10,9 @@ import { tify } from 'chinese-conv';
 import { VOICE_FORMS } from './liff/voice-form-schema.js';
 import { verifyLineToken } from './line-auth.js';
 import { listContacts, SEED_CONTACTS } from './contacts.js';
+import { handleKnowledgeIngest, handleLineWebhook } from './line-webhook.js';
+import { queryKnowledgeBase } from './knowledge.js';
+import { queryVoiceIntakeHistory } from './line-chat.js';
 
 // 資料清洗範例：語音辨識偶爾會混出簡體字，寫進資料庫前統一轉成繁體。
 export function normalizeFieldsToTraditionalChinese(fields) {
@@ -297,6 +300,29 @@ async function handleUpsertUserMemory(request, env) {
   return json({ success: true }, 200);
 }
 
+async function handleVoiceIntakeHistoryQuery(request, env) {
+  const body = await readJsonObject(request);
+  const { lineUserId, idToken, limit } = body;
+  if (!lineUserId) return json({ error: 'Missing lineUserId' }, 400);
+  if (!idToken) return json({ error: 'idToken required' }, 400);
+  const identity = await verifyLineIdentity(idToken, env, lineUserId);
+  if (!identity.ok) return json({ error: identity.error }, identity.status);
+  const records = await queryVoiceIntakeHistory(env?.DB, lineUserId, limit);
+  return json({ success: true, records }, 200);
+}
+
+async function handleVoiceIntakeKnowledgeQuery(request, env) {
+  const body = await readJsonObject(request);
+  const { lineUserId, idToken, query } = body;
+  if (!lineUserId) return json({ error: 'Missing lineUserId' }, 400);
+  if (!idToken) return json({ error: 'idToken required' }, 400);
+  if (!query || typeof query !== 'string') return json({ error: 'query required' }, 400);
+  const identity = await verifyLineIdentity(idToken, env, lineUserId);
+  if (!identity.ok) return json({ error: identity.error }, identity.status);
+  const results = await queryKnowledgeBase(env, query, 5);
+  return json({ success: true, results }, 200);
+}
+
 async function handleVerify(request, env) {
   const { idToken } = await readJsonObject(request);
   if (!idToken) return json({ error: 'idToken required' }, 400);
@@ -317,6 +343,10 @@ async function dispatch(request, env) {
   if (url.pathname === '/api/voice-intake/remember' && request.method === 'POST') return handleVoiceIntakeRemember(request, env);
   if (url.pathname === '/api/internal/memory' && request.method === 'GET') return handleGetUserMemory(request, env);
   if (url.pathname === '/api/internal/memory' && request.method === 'POST') return handleUpsertUserMemory(request, env);
+  if (url.pathname === '/api/voice-intake/query-history' && request.method === 'POST') return handleVoiceIntakeHistoryQuery(request, env);
+  if (url.pathname === '/api/voice-intake/query-knowledge' && request.method === 'POST') return handleVoiceIntakeKnowledgeQuery(request, env);
+  if (url.pathname === '/webhook/line' && request.method === 'POST') return handleLineWebhook(request, env);
+  if (url.pathname === '/api/internal/knowledge/ingest' && request.method === 'POST') return handleKnowledgeIngest(request, env);
   if (env.ASSETS) return env.ASSETS.fetch(request);
   return json({ error: 'not_found' }, 404);
 }
