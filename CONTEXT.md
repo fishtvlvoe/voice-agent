@@ -29,6 +29,7 @@ status: P5 驗收中；合成 Webhook RED 已定位到 LINE 回覆邊界；待�
 - [FACT] 直接呼叫 xAI Chat Completions（`grok-4.7`）回傳 200；本機 14/14 測試通過。（日期：2026-09-25）
 - [FACT] `voice-agent` 文字聊天目前使用 xAI Chat Completions；程式以 `env.XAI_TEXT_MODEL || 'grok-4.7'` 選模型，本機 `.env` 沒有設定 `XAI_TEXT_MODEL` 覆寫。（證據：`src/line-chat.js`、`wrangler.toml`）
 - [FACT] BNI 另一個專案的產業語意分類使用 Gemini `gemini-3.5-flash-lite`；這不是 `voice-agent` 目前的文字模型。（證據：`/Users/fishtv/Development/C-客戶專案/bni/code/workers/bni-connector/src/gemini-category-matcher.js`）
+- [GAP] `spectra list --changes --json` 目前列出 3 份 `in-progress` change；本次仍以 `line-chat-memory-knowledge` 作為工作脈絡，但在建立下一份 SR 前必須逐一查明並處理其餘 change 的狀態。（日期：2026-09-25；證據：`spectra list --changes --json`、`spectra status --change <change> --json`）
 - [FACT] 合成 RED 使用合法 LINE 簽章與假 reply token 呼叫正式 Worker，回傳 `500 internal_error`；Worker 日誌顯示 xAI 路徑完成後 `sendLineReply failed 400`，證明合成事件已走到 LINE 回覆邊界。（日期：2026-09-25）
 - [FACT] LINE 官方 Webhook Test 實際從 LINE Corporation 送達新版 Worker，API 回傳 `statusCode=200`；Worker 日誌確認簽章通過、`eventCount=0`、`handled=0`。（日期：2026-09-25）
 - [FACT] 原因已確認：舊版同步等待 xAI 約 5～15 秒才回 Webhook；新版合成文字事件回 `200 {"ok":true,"queued":1}`，耗時約 0.26 秒，背景處理再因假 reply token 收到 LINE `400`。（日期：2026-09-25）
@@ -36,6 +37,7 @@ status: P5 驗收中；合成 Webhook RED 已定位到 LINE 回覆邊界；待�
 - [DECISION] 第一個施工範圍是：LINE 文字聊天＋共用記憶／知識查詢；暫不切換 OpenAI/Ringg，也暫不做 email、記帳、電腦／雲端 AI connector。（日期：2026-09-24；來源：使用者確認）
 - [DECISION] 個人記憶採「AI 先偵測候選內容 → 先詢問使用者 → 使用者明確同意後才儲存」；禁止 AI 靜默保存姓名、偏好、記事或提醒。（日期：2026-09-25；來源：使用者確認；尚未施工）
 - [DECISION] LINE Push API 只是傳送管道；產生文字與記憶候選判斷才會產生模型費用，D1 寫入本身不另收語言模型費用。（日期：2026-09-25；來源：使用者確認方向）
+- [DECISION] 工作順序是：先補強 `dev-sop` 的 SR 開／接續／封存閘門與派工判斷回報格式，再回到 voice-agent 的多模型 Provider Router；多模型工作暫停到前一項完成。（日期：2026-09-25；來源：使用者確認）
 
 ## 尚未確認
 
@@ -55,4 +57,4 @@ status: P5 驗收中；合成 Webhook RED 已定位到 LINE 回覆邊界；待�
 
 ## 下一步
 
-下一步先把「候選記憶分類、確認問句、使用者同意後寫入」拆成規格；目前不擴大到自動提醒排程或外部 connector。
+下一步先完成 `dev-sop` 的 SR 生命週期與派工回報閘門；完成後才把「候選記憶分類、確認問句、使用者同意後寫入」及多模型 Provider Router 拆成新規格。目前不擴大到自動提醒排程或外部 connector。
