@@ -6,7 +6,7 @@
 
 ## 1. Messaging API 憑證補齊
 
-- [ ] 1.1 從 `docs/spectra/changes/line-official-account-setup/resource-ids.md` 找到已建立的 Channel Access Token / Channel Secret（`line-official-account-setup` SR 已建立官方帳號但沒把這兩個寫進 secrets），`wrangler secret put LINE_CHANNEL_ACCESS_TOKEN`、`wrangler secret put LINE_CHANNEL_SECRET`。驗證：`wrangler secret list` 列出這兩把新 key
+- [x] 1.1 從已完成的 `line-official-account-setup` worktree 取回 `resource-ids.md`，將 Channel Access Token / Channel Secret 寫入 `voice-agent` Worker；驗證：`wrangler secret list` 列出兩把 key，LINE `/v2/bot/info` 回傳 `AIVER AI 語音助理`／`@461fuosv`，有效簽章 webhook 回 200、無效簽章回 401。
 
 ## 2. Webhook 簽章驗證 + 路由骨架
 

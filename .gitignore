@@ -2,6 +2,10 @@ node_modules/
 .wrangler/
 .dev.vars
 *.log
+.env
+.env.*
+!.env.example
+resource-ids.md
 
 # Spectra app data
 .spectra/
