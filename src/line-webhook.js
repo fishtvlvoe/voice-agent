@@ -83,20 +83,19 @@ export async function sendLineReply({ replyToken, userId, text, env, fetchImpl =
   throw new Error('line_message_send_failed');
 }
 
-export async function handleLineWebhook(request, env, { fetchImpl = globalThis.fetch } = {}) {
-  const body = await request.text();
-  const signature = request.headers.get('x-line-signature');
-  const valid = await verifyLineSignature(body, signature, env?.LINE_CHANNEL_SECRET);
-  if (!valid) return json({ error: 'invalid_line_signature' }, 401);
+function isLineTextEvent(event) {
+  return event?.type === 'message'
+    && event.message?.type === 'text'
+    && Boolean(event.source?.userId)
+    && Boolean(event.message?.text)
+    && Boolean(event.replyToken);
+}
 
-  const { events } = parseLineWebhookPayload(body);
-  console.log('handleLineWebhook: signature verified', { eventCount: events.length });
+async function processLineTextEvents(events, env, fetchImpl) {
   let handled = 0;
   for (const event of events) {
-    if (event?.type !== 'message' || event.message?.type !== 'text') continue;
-    const lineUserId = event.source?.userId;
-    const text = event.message?.text;
-    if (!lineUserId || !text || !event.replyToken) continue;
+    const lineUserId = event.source.userId;
+    const text = event.message.text;
     console.log('handleLineWebhook: text event', { textLength: String(text).length });
 
     let replyText;
@@ -119,7 +118,28 @@ export async function handleLineWebhook(request, env, { fetchImpl = globalThis.f
   }
 
   console.log('handleLineWebhook: completed', { handled });
-  return json({ ok: true, handled }, 200);
+  return handled;
+}
+
+export async function handleLineWebhook(request, env, { fetchImpl = globalThis.fetch, waitUntil } = {}) {
+  const body = await request.text();
+  const signature = request.headers.get('x-line-signature');
+  const valid = await verifyLineSignature(body, signature, env?.LINE_CHANNEL_SECRET);
+  if (!valid) return json({ error: 'invalid_line_signature' }, 401);
+
+  const { events } = parseLineWebhookPayload(body);
+  console.log('handleLineWebhook: signature verified', { eventCount: events.length });
+  const textEvents = events.filter(isLineTextEvent);
+  const processing = processLineTextEvents(textEvents, env, fetchImpl);
+
+  if (typeof waitUntil === 'function') {
+    waitUntil(processing.catch((error) => {
+      console.error('handleLineWebhook: background processing failed', error?.message || error);
+    }));
+    return json({ ok: true, queued: textEvents.length }, 200);
+  }
+
+  return json({ ok: true, handled: await processing }, 200);
 }
 
 function hasIngestPermission(request, env) {

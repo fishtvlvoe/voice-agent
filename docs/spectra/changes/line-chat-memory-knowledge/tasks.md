@@ -12,6 +12,7 @@
 
 - [x] 2.1 `src/index.js` 新增 `POST /webhook/line` 路由，讀取 raw body + `x-line-signature` header，用 `env.LINE_CHANNEL_SECRET` 算 HMAC-SHA256 驗證簽章。驗證失敗回 401，不解析 body 內容。驗證：`test/line-webhook.test.js` 已驗證假簽章回 401 且 downstream 呼叫次數為 0。
 - [x] 2.2 簽章正確時解析 `events[]`，先只處理 `type === 'message'` 且 `message.type === 'text'` 的事件，其他事件類型先忽略。驗證：`test/line-webhook.test.js` 已送合法簽章 + 文字 payload，確認進入 reply 流程。
+- [x] 2.3 Webhook 在 2 秒期限內先回 `200`，文字 AI 與 LINE 回覆交由 Cloudflare `waitUntil` 背景處理；無 `ctx` 的單元測試維持同步路徑。驗證：慢速 xAI RED → GREEN 測試、`npm test` 15/15、正式 Worker 合成文字事件回 `200 queued`。
 
 ## 3. 文字聊天回覆邏輯
 

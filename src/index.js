@@ -335,7 +335,7 @@ async function handleVerify(request, env) {
 }
 
 // ---------- 路由 ----------
-async function dispatch(request, env) {
+async function dispatch(request, env, ctx) {
   const url = new URL(request.url);
   if (url.pathname === '/api/auth/verify' && request.method === 'POST') return handleVerify(request, env);
   if (url.pathname === '/api/voice-session/token' && request.method === 'POST') return handleVoiceSessionToken(request, env);
@@ -345,16 +345,20 @@ async function dispatch(request, env) {
   if (url.pathname === '/api/internal/memory' && request.method === 'POST') return handleUpsertUserMemory(request, env);
   if (url.pathname === '/api/voice-intake/query-history' && request.method === 'POST') return handleVoiceIntakeHistoryQuery(request, env);
   if (url.pathname === '/api/voice-intake/query-knowledge' && request.method === 'POST') return handleVoiceIntakeKnowledgeQuery(request, env);
-  if (url.pathname === '/webhook/line' && request.method === 'POST') return handleLineWebhook(request, env);
+  if (url.pathname === '/webhook/line' && request.method === 'POST') {
+    return handleLineWebhook(request, env, {
+      waitUntil: typeof ctx?.waitUntil === 'function' ? ctx.waitUntil.bind(ctx) : undefined,
+    });
+  }
   if (url.pathname === '/api/internal/knowledge/ingest' && request.method === 'POST') return handleKnowledgeIngest(request, env);
   if (env.ASSETS) return env.ASSETS.fetch(request);
   return json({ error: 'not_found' }, 404);
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
-      return await dispatch(request, env);
+      return await dispatch(request, env, ctx);
     } catch (err) {
       console.error('unhandled error', err?.message || err);
       return json({ error: 'internal_error' }, 500);

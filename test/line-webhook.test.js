@@ -75,6 +75,52 @@ test('handleLineWebhook verifies the signature and replies through LINE', async 
   assert.equal(requests.at(-1).body.messages[0].text, '你好，我在。');
 });
 
+test('handleLineWebhook acknowledges before slow background processing finishes', async () => {
+  const secret = 'channel-secret';
+  const body = JSON.stringify({ events: [{
+    type: 'message',
+    replyToken: 'reply-token',
+    source: { userId: 'U-test' },
+    message: { type: 'text', text: '慢速測試' },
+  }] });
+  const signature = createHmac('sha256', secret).update(body).digest('base64');
+  const requests = [];
+  let resolveXai;
+  const xaiResponse = new Promise((resolve) => { resolveXai = resolve; });
+  let backgroundWork;
+  const fetchImpl = async (url, options) => {
+    requests.push({ url, body: options?.body ? JSON.parse(options.body) : null });
+    if (url.includes('x.ai')) return xaiResponse;
+    return new Response('{}', { status: 200 });
+  };
+
+  const responsePromise = handleLineWebhook(
+    new Request('https://voice-agent.test/webhook/line', {
+      method: 'POST',
+      headers: { 'x-line-signature': signature },
+      body,
+    }),
+    { XAI_API_KEY: 'test-key', LINE_CHANNEL_SECRET: secret, LINE_CHANNEL_ACCESS_TOKEN: 'line-token' },
+    {
+      fetchImpl,
+      waitUntil(promise) { backgroundWork = promise; },
+    },
+  );
+  const response = await Promise.race([
+    responsePromise,
+    new Promise((resolve) => setTimeout(() => resolve('timeout'), 100)),
+  ]);
+
+  assert.notEqual(response, 'timeout', 'Webhook must acknowledge before xAI finishes');
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).queued, 1);
+  assert.ok(backgroundWork instanceof Promise);
+
+  resolveXai(new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: '背景回覆' } }] }), { status: 200 }));
+  await backgroundWork;
+  assert.equal(requests.at(-1).url, 'https://api.line.me/v2/bot/message/reply');
+});
+
 test('handleLineWebhook rejects an invalid signature before calling downstream services', async () => {
   let downstreamCalls = 0;
   const response = await handleLineWebhook(

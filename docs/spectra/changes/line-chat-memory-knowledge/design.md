@@ -36,7 +36,7 @@ LINE Messaging API webhook 的 `message` 事件會帶 `event.source.userId`，�
 ## Implementation Contract
 
 **Behavior**：
-- 使用者在 LINE 聊天室輸入文字 → 官方帳號在幾秒內回覆一則文字訊息，內容跟該使用者的身分/記憶/知識庫一致
+- 使用者在 LINE 聊天室輸入文字 → Webhook 驗證後先在 2 秒內回 `200`，AI 生成與 LINE 回覆在背景完成；官方帳號回覆一則文字訊息，內容跟該使用者的身分/記憶/知識庫一致
 - 使用者問「我之前記錄過什麼」→ 助理列出最近幾筆 `voice_intake_records`（語音或文字問都要能觸發）
 - 使用者問知識庫範圍內的問題 → 助理從已上傳文件找到相關段落，組成回答
 
@@ -49,6 +49,7 @@ LINE Messaging API webhook 的 `message` 事件會帶 `event.source.userId`，�
 
 **Failure modes**：
 - webhook 簽章驗證失敗 → 回 401，不處理內容，記 log
+- AI 或資料查詢耗時超過 LINE Webhook 回應期限 → 先回 200，再用 Cloudflare `waitUntil` 完成背景處理；不得讓 AI 呼叫阻塞 Webhook ACK
 - LINE reply token 過期（超過使用時限）→ 改用 push API 而非 reply API（reply token 只能用一次且有時效）
 - Vectorize 查無結果 → 明確告知使用者「知識庫目前沒有相關資料」，不可捏造答案
 
