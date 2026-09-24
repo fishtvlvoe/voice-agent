@@ -27,7 +27,8 @@ branch：`feature/line-chat-memory-knowledge`
 - [VERIFIED] `npm test` 14/14；`npx wrangler deploy --dry-run` 成功；遠端 D1 已確認 `knowledge_chunks` 存在；`wrangler vectorize list` 已列出 `voice-agent-knowledge-index`。
 - [VERIFIED] 已部署 `voice-agent`，最新驗證版本 `722b75a1-a81a-4b02-8ff5-d6efef25789c`；LINE secrets 已寫入，`/v2/bot/info` 回傳 `AIVER AI 語音助理`／`@461fuosv`，有效簽章回 200、無效簽章回 401。
 - [VERIFIED] 遠端知識匯入 smoke test 回傳 `ok:true` 與 `chunkCount:1`，等待非同步索引後用 `wrangler vectorize query --vector-id` 查回同一 vector，score `0.9999984`；D1、Vectorize 測試資料與臨時 secret 已清除。
-- [UNVERIFIED] LINE 後台 webhook 是否已指向正式 URL、實際 LINE 回覆、知識查詢完整相關性／無資料行為尚未驗證。
+- [VERIFIED] LINE webhook URL 已指向 Worker，LINE API 回讀 `active=true`；LINE webhook test 回傳 `success=true`、`statusCode=200`。
+- [UNVERIFIED] 真實 LINE 使用者文字回覆、記憶交叉查詢、知識查詢完整相關性／無資料行為尚未驗證。
 
 ## 進行中的 change
 
@@ -44,10 +45,10 @@ branch：`feature/line-chat-memory-knowledge`
 ## 接續規則
 
 1. 不先改 provider，不先刪除現有 xAI 路徑。
-2. 先確認 LINE 後台 webhook URL／啟用狀態與正式 Knowledge Ingest Token。
+2. 先做真實 LINE 文字回覆與記憶交叉驗收，再配置正式 Knowledge Ingest Token。
 3. 不把本機測試或 dry-run 當成真人 LINE 驗收。
 4. 每個未完成 task 先補行為證據，再勾選。
 
 ## 下一個動作
 
-進入 P5 前置：確認 webhook 已啟用，然後做 LINE Webhook 與知識查詢的真人驗收；不要把 smoke test 當正式驗收。
+進入 P5 前置：做 LINE Webhook、記憶與知識查詢的真人驗收；不要把 smoke test 當正式驗收。
