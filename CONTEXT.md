@@ -28,6 +28,7 @@ status: P5 驗收中；合成 Webhook RED 已定位到 LINE 回覆邊界；待�
 - [FACT] LINE webhook URL 已設定為 `https://voice-agent.fishandy1213.workers.dev/webhook/line`，LINE API 回讀 `active=true`；LINE webhook test 回傳 `success=true`、`statusCode=200`。（日期：2026-09-24）
 - [FACT] 直接呼叫 xAI Chat Completions（`grok-4.7`）回傳 200；本機 14/14 測試通過。（日期：2026-09-25）
 - [FACT] 合成 RED 使用合法 LINE 簽章與假 reply token 呼叫正式 Worker，回傳 `500 internal_error`；Worker 日誌顯示 xAI 路徑完成後 `sendLineReply failed 400`，證明合成事件已走到 LINE 回覆邊界。（日期：2026-09-25）
+- [FACT] LINE 官方 Webhook Test 實際從 LINE Corporation 送達新版 Worker，API 回傳 `statusCode=200`；Worker 日誌確認簽章通過、`eventCount=0`、`handled=0`。（日期：2026-09-25）
 - [DECISION] 產品方向是：LINE 文字與語音共用同一個個人記憶大腦，並能把整理結果送到 email、記帳系統或電腦／雲端 AI。（日期：2026-09-24；來源：使用者需求）
 - [DECISION] 第一個施工範圍是：LINE 文字聊天＋共用記憶／知識查詢；暫不切換 OpenAI/Ringg，也暫不做 email、記帳、電腦／雲端 AI connector。（日期：2026-09-24；來源：使用者確認）
 
@@ -45,8 +46,8 @@ status: P5 驗收中；合成 Webhook RED 已定位到 LINE 回覆邊界；待�
 - P3：第一個施工範圍已確認，保存政策與第一個外部 connector 延後。
 - P4：已新增 LINE Webhook、xAI Chat Completions、reply/push fallback、共用歷史／知識工具、文件切塊與知識匯入端點；語音與文字共用後端查詢函式。
 - P4 驗證：14/14 focused tests 通過；D1 `knowledge_chunks` 已遠端套用；Vectorize 建立完成；Worker 已部署；遠端匯入 smoke test 通過。
-- P5：正式環境驗收中；合成事件已完成，真人 LINE 訊息事件與回覆畫面仍未取得證據。
+- P5：正式環境驗收中；LINE 平台傳輸邊界已完成，合成事件已完成，真人 LINE 訊息事件與回覆畫面仍未取得證據。
 
 ## 下一步
 
-下一步在即時 `wrangler tail` 監看時用測試帳號傳一則文字，取得真人事件的回覆 API 結果；再做記憶與知識庫交叉驗證。
+下一步在即時 `wrangler tail` 監看時用測試帳號傳一則文字；若沒有 `text event` 日誌，改查使用者是否在正確官方帳號的一對一聊天室送出訊息；若有事件，再依 reply API 狀態修正。
