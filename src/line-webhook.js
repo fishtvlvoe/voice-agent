@@ -90,12 +90,14 @@ export async function handleLineWebhook(request, env, { fetchImpl = globalThis.f
   if (!valid) return json({ error: 'invalid_line_signature' }, 401);
 
   const { events } = parseLineWebhookPayload(body);
+  console.log('handleLineWebhook: signature verified', { eventCount: events.length });
   let handled = 0;
   for (const event of events) {
     if (event?.type !== 'message' || event.message?.type !== 'text') continue;
     const lineUserId = event.source?.userId;
     const text = event.message?.text;
     if (!lineUserId || !text || !event.replyToken) continue;
+    console.log('handleLineWebhook: text event', { textLength: String(text).length });
 
     let replyText;
     try {
@@ -105,16 +107,18 @@ export async function handleLineWebhook(request, env, { fetchImpl = globalThis.f
       replyText = '我目前暫時無法處理這則訊息，請稍後再試。';
     }
 
-    await sendLineReply({
+    const delivery = await sendLineReply({
       replyToken: event.replyToken,
       userId: lineUserId,
       text: replyText,
       env,
       fetchImpl,
     });
+    console.log('handleLineWebhook: reply sent', { mode: delivery.mode });
     handled += 1;
   }
 
+  console.log('handleLineWebhook: completed', { handled });
   return json({ ok: true, handled }, 200);
 }
 

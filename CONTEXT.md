@@ -2,9 +2,9 @@
 updated: 2026-09-24
 sop: dev-sop
 lifecycle_stage: D1
-current_stage: P4
+current_stage: P5
 active_change: docs/spectra/changes/line-chat-memory-knowledge
-status: P4 初版已施工並部署；Vectorize、LINE 憑證與 webhook 已驗證；待真人訊息驗收
+status: P5 驗收中；合成 Webhook RED 已定位到 LINE 回覆邊界；待真人訊息驗收
 ---
 
 ## 這個專案在幹嘛
@@ -21,11 +21,13 @@ status: P4 初版已施工並部署；Vectorize、LINE 憑證與 webhook 已驗�
 - [FACT] 遠端 `voice-agent-db` 已新增 `knowledge_chunks` 表；資料庫 ID 是 `4f90a993-2db2-41d2-97b2-a7db6acac4ca`。（證據：`wrangler d1 execute voice-agent-db --remote`）
 - [FACT] 本機測試 14/14 通過，Wrangler dry-run 可辨識 `DB`、`KNOWLEDGE_INDEX`、`AI` 綁定。（證據：`npm test`、`npx wrangler deploy --dry-run`）
 - [FACT] `voice-agent-knowledge-index` 已建立為 1024 維 cosine index；既有 Workers token 已補上 `Vectorize: 編輯`。（證據：`npx wrangler vectorize list`）
-- [FACT] Worker 已部署到 `https://voice-agent.fishandy1213.workers.dev`，最新驗證版本 `6c76dfb9-232e-46c6-9fe8-cfb5c7152278`。（證據：`npx wrangler deploy`）
+- [FACT] Worker 已部署到 `https://voice-agent.fishandy1213.workers.dev`，目前 100% live version 是 `638f6945-8976-4b40-aa50-6cb2adead41e`；此版本加入不含個資的 Webhook 事件鏈日誌。（證據：`npx wrangler deploy`、`npx wrangler tail`）
 - [FACT] 遠端知識匯入 smoke test 成功：回傳 `ok:true`、1 個 chunk，D1 查到 1 筆；等待 Vectorize 非同步索引完成後查回同一 vector，score `0.9999984`；測試資料與臨時 secret 已清除。（日期：2026-09-24）
 - [FACT] 已從完成的 `line-official-account-setup` worktree 取回 confidential `resource-ids.md`；LINE Channel Access Token／Secret 已寫入 Worker，`/v2/bot/info` 確認官方帳號為 `AIVER AI 語音助理`／`@461fuosv`。（日期：2026-09-24）
 - [FACT] 資源登錄已集中到本機 `voice-agent/.env`（權限 600、已加入 `.gitignore`）；Cloudflare Workers 部署 token 仍只存於 `/Users/fishtv/Development/.env`。
 - [FACT] LINE webhook URL 已設定為 `https://voice-agent.fishandy1213.workers.dev/webhook/line`，LINE API 回讀 `active=true`；LINE webhook test 回傳 `success=true`、`statusCode=200`。（日期：2026-09-24）
+- [FACT] 直接呼叫 xAI Chat Completions（`grok-4.7`）回傳 200；本機 14/14 測試通過。（日期：2026-09-25）
+- [FACT] 合成 RED 使用合法 LINE 簽章與假 reply token 呼叫正式 Worker，回傳 `500 internal_error`；Worker 日誌顯示 xAI 路徑完成後 `sendLineReply failed 400`，證明合成事件已走到 LINE 回覆邊界。（日期：2026-09-25）
 - [DECISION] 產品方向是：LINE 文字與語音共用同一個個人記憶大腦，並能把整理結果送到 email、記帳系統或電腦／雲端 AI。（日期：2026-09-24；來源：使用者需求）
 - [DECISION] 第一個施工範圍是：LINE 文字聊天＋共用記憶／知識查詢；暫不切換 OpenAI/Ringg，也暫不做 email、記帳、電腦／雲端 AI connector。（日期：2026-09-24；來源：使用者確認）
 
@@ -43,8 +45,8 @@ status: P4 初版已施工並部署；Vectorize、LINE 憑證與 webhook 已驗�
 - P3：第一個施工範圍已確認，保存政策與第一個外部 connector 延後。
 - P4：已新增 LINE Webhook、xAI Chat Completions、reply/push fallback、共用歷史／知識工具、文件切塊與知識匯入端點；語音與文字共用後端查詢函式。
 - P4 驗證：14/14 focused tests 通過；D1 `knowledge_chunks` 已遠端套用；Vectorize 建立完成；Worker 已部署；遠端匯入 smoke test 通過。
-- P5：尚未開始正式環境驗收；正式 Knowledge Ingest Token 與真人 LINE 測試仍是前置條件。
+- P5：正式環境驗收中；合成事件已完成，真人 LINE 訊息事件與回覆畫面仍未取得證據。
 
 ## 下一步
 
-下一步用測試帳號在 LINE 傳一則文字，確認 xAI 回覆；再做記憶與知識庫交叉驗證。
+下一步在即時 `wrangler tail` 監看時用測試帳號傳一則文字，取得真人事件的回覆 API 結果；再做記憶與知識庫交叉驗證。
