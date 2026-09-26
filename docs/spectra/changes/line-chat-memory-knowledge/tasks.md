@@ -16,7 +16,7 @@
 
 ## 3. 文字聊天回覆邏輯
 
-- [x] 3.1 把 `AGENT_INSTRUCTIONS`、`REMEMBER_TOOL`、`query_voice_intake_history`、`query_knowledge_base` 組成工具清單，用 `event.source.userId` 當 `lineUserId`，查 `user_memory`/`customer_profiles` 組 context，呼叫 xAI Chat Completions API（非 Realtime）取得回覆文字。驗證：`test/line-chat.test.js` 已確認已知使用者記憶進入 prompt，且工具回合可完成。
+- [x] 3.1 把 `AGENT_INSTRUCTIONS`、`REMEMBER_TOOL`、`query_voice_intake_history`、`query_knowledge_base` 組成工具清單，用 `event.source.userId` 當 `lineUserId`，查 `user_memory`/`customer_profiles` 組 context，呼叫 OpenAI Chat Completions API（非 Realtime，預設 `gpt-4.1`）取得回覆文字。驗證：`test/line-chat.test.js` 已確認已知使用者記憶進入 prompt、OpenAI endpoint/model 正確，且工具回合可完成。
 - [x] 3.2 在 reply token 時效內用 Messaging API `reply` 端點回覆；reply token 失效時改用 `push` 端點。驗證：`test/line-webhook.test.js` 已驗證 reply 與 400 → push fallback。
 
 ## 4. Vectorize 知識庫：寫入路徑

@@ -9,7 +9,7 @@ import {
 } from './liff/voice-form-schema.js';
 import { queryKnowledgeBase } from './knowledge.js';
 
-const DEFAULT_XAI_TEXT_MODEL = 'grok-4.7';
+const DEFAULT_OPENAI_TEXT_MODEL = 'gpt-4.1';
 const MAX_TOOL_ROUNDS = 4;
 const MAX_HISTORY_LIMIT = 10;
 const MAX_MEMORY_VALUE_LENGTH = 500;
@@ -130,16 +130,16 @@ export async function rememberUserInfo(db, lineUserId, field, value) {
   return { success: true, field: normalizedField };
 }
 
-async function callXaiChat({ env, messages, tools, fetchImpl = globalThis.fetch }) {
-  if (!env?.XAI_API_KEY) throw new Error('xai_api_key_missing');
-  const response = await fetchImpl('https://api.x.ai/v1/chat/completions', {
+async function callOpenAiChat({ env, messages, tools, fetchImpl = globalThis.fetch }) {
+  if (!env?.OPENAI_API_KEY) throw new Error('openai_api_key_missing');
+  const response = await fetchImpl('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${env.XAI_API_KEY}`,
+      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: env.XAI_TEXT_MODEL || DEFAULT_XAI_TEXT_MODEL,
+      model: env.OPENAI_TEXT_MODEL || DEFAULT_OPENAI_TEXT_MODEL,
       messages,
       tools,
       tool_choice: 'auto',
@@ -149,11 +149,11 @@ async function callXaiChat({ env, messages, tools, fetchImpl = globalThis.fetch 
   });
 
   if (!response.ok) {
-    console.error('callXaiChat failed', response.status);
-    throw new Error('xai_chat_failed');
+    console.error('callOpenAiChat failed', response.status);
+    throw new Error('openai_chat_failed');
   }
   const data = await response.json();
-  if (!data?.choices?.[0]?.message) throw new Error('xai_chat_response_invalid');
+  if (!data?.choices?.[0]?.message) throw new Error('openai_chat_response_invalid');
   return data.choices[0].message;
 }
 
@@ -197,7 +197,7 @@ export async function generateLineChatReply({ env, lineUserId, text, fetchImpl =
   const tools = buildChatTools();
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-    const message = await callXaiChat({ env, messages, tools, fetchImpl });
+    const message = await callOpenAiChat({ env, messages, tools, fetchImpl });
     if (!Array.isArray(message.tool_calls) || message.tool_calls.length === 0) {
       const content = typeof message.content === 'string' ? message.content.trim() : '';
       return content || '我目前沒有可以回覆的內容。';

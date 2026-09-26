@@ -21,9 +21,11 @@
 
 ## Decisions
 
-### 文字聊天走 Chat Completions，不是 Realtime API
+### 文字聊天走 OpenAI Chat Completions，不是 Realtime API
 
 語音那條路徑用的是 xAI Realtime API（WebSocket，為了低延遲語音）。文字聊天不需要低延遲語音串流，改用一般的 Chat Completions（HTTP request/response），架構更簡單、成本更低，且不需要在 Worker 裡維護長連線。
+
+目前文字 provider 使用 OpenAI Chat Completions，預設模型為 `gpt-4.1`；完整的 Ringg 式 Provider Router 尚未納入本 SR。
 
 ### 身分辨識：webhook 事件的 `source.userId` 直接當 `lineUserId`
 

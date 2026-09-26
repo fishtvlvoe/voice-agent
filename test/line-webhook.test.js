@@ -54,7 +54,7 @@ test('handleLineWebhook verifies the signature and replies through LINE', async 
   };
   const fetchImpl = async (url, options) => {
     requests.push({ url, body: JSON.parse(options.body) });
-    if (url.includes('x.ai')) {
+    if (url.includes('api.openai.com')) {
       return new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: '你好，我在。' } }] }), { status: 200 });
     }
     return new Response('{}', { status: 200 });
@@ -65,7 +65,7 @@ test('handleLineWebhook verifies the signature and replies through LINE', async 
       headers: { 'x-line-signature': signature },
       body,
     }),
-    { DB: db, XAI_API_KEY: 'test-key', LINE_CHANNEL_SECRET: secret, LINE_CHANNEL_ACCESS_TOKEN: 'line-token' },
+    { DB: db, OPENAI_API_KEY: 'test-key', LINE_CHANNEL_SECRET: secret, LINE_CHANNEL_ACCESS_TOKEN: 'line-token' },
     { fetchImpl },
   );
 
@@ -85,12 +85,12 @@ test('handleLineWebhook acknowledges before slow background processing finishes'
   }] });
   const signature = createHmac('sha256', secret).update(body).digest('base64');
   const requests = [];
-  let resolveXai;
-  const xaiResponse = new Promise((resolve) => { resolveXai = resolve; });
+  let resolveOpenAi;
+  const openAiResponse = new Promise((resolve) => { resolveOpenAi = resolve; });
   let backgroundWork;
   const fetchImpl = async (url, options) => {
     requests.push({ url, body: options?.body ? JSON.parse(options.body) : null });
-    if (url.includes('x.ai')) return xaiResponse;
+    if (url.includes('api.openai.com')) return openAiResponse;
     return new Response('{}', { status: 200 });
   };
 
@@ -100,7 +100,7 @@ test('handleLineWebhook acknowledges before slow background processing finishes'
       headers: { 'x-line-signature': signature },
       body,
     }),
-    { XAI_API_KEY: 'test-key', LINE_CHANNEL_SECRET: secret, LINE_CHANNEL_ACCESS_TOKEN: 'line-token' },
+    { OPENAI_API_KEY: 'test-key', LINE_CHANNEL_SECRET: secret, LINE_CHANNEL_ACCESS_TOKEN: 'line-token' },
     {
       fetchImpl,
       waitUntil(promise) { backgroundWork = promise; },
@@ -111,12 +111,12 @@ test('handleLineWebhook acknowledges before slow background processing finishes'
     new Promise((resolve) => setTimeout(() => resolve('timeout'), 100)),
   ]);
 
-  assert.notEqual(response, 'timeout', 'Webhook must acknowledge before xAI finishes');
+  assert.notEqual(response, 'timeout', 'Webhook must acknowledge before OpenAI finishes');
   assert.equal(response.status, 200);
   assert.equal((await response.json()).queued, 1);
   assert.ok(backgroundWork instanceof Promise);
 
-  resolveXai(new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: '背景回覆' } }] }), { status: 200 }));
+  resolveOpenAi(new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: '背景回覆' } }] }), { status: 200 }));
   await backgroundWork;
   assert.equal(requests.at(-1).url, 'https://api.line.me/v2/bot/message/reply');
 });

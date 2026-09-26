@@ -1,6 +1,6 @@
 # voice-agent
 
-從一套語音收單系統抽出的**LINE 個人記憶助理骨架**（Cloudflare Workers）。語音走 LIFF + xAI Realtime，文字走 LINE Messaging API + xAI Chat Completions；兩條路徑共用 D1 記憶、歷史記錄與知識庫查詢。
+從一套語音收單系統抽出的**LINE 個人記憶助理骨架**（Cloudflare Workers）。語音目前走 LIFF + xAI Realtime，文字走 LINE Messaging API + OpenAI Chat Completions（預設 `gpt-4.1`）；兩條路徑共用 D1 記憶、歷史記錄與知識庫查詢。
 
 ## 這是什麼
 
@@ -41,6 +41,7 @@ wrangler d1 execute voice-agent-db --file=schema.sql
 # 注意：display_name/member_tier/notes/last_order_summary 內容會直接進語音 AI 的 prompt，勿夾帶「忽略先前指示」之類的指令文字。
 wrangler secret put LIFF_ID
 wrangler secret put XAI_API_KEY
+wrangler secret put OPENAI_API_KEY
 wrangler secret put LINE_CHANNEL_ACCESS_TOKEN
 wrangler secret put LINE_CHANNEL_SECRET
 wrangler secret put KNOWLEDGE_INGEST_TOKEN

@@ -13,7 +13,7 @@
 1. **Messaging API webhook**：新增 `/webhook/line` 端點（POST），驗證 LINE 簽章，處理 `message` 事件（文字訊息）。收到文字訊息後：
    - 用 `event.source.userId` 當身分（跟 LIFF 那邊的 `lineUserId` 是同一個 LINE user id，天然對得上）
    - 組出跟語音助理一致的 system context（沿用 `AGENT_INSTRUCTIONS` + 記憶 + 客戶檔）
-   - 呼叫 xAI（文字對話用 Chat Completions 或同一個 Agent 的文字模式，不用 Realtime 語音那條）
+   - 呼叫 OpenAI Chat Completions（文字對話不用 Realtime 語音那條；目前預設 `gpt-4.1`）
    - 用 Messaging API `reply` 端點把答案回覆回聊天室
 2. **查詢歷史記錄工具**：新增一個 function-calling 工具（語音跟文字兩邊共用），依 `lineUserId` 查 `voice_intake_records`，取最近 N 筆組成摘要念/講給使用者聽。
 3. **Vectorize 知識庫**：

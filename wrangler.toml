@@ -24,5 +24,6 @@ binding = "AI"
 [vars]
 # LIFF_ID: 請用 `wrangler secret put LIFF_ID` 設定（你的 LINE LIFF App ID）
 # XAI_API_KEY: 請用 `wrangler secret put XAI_API_KEY` 設定（xAI API 金鑰）
-# XAI_TEXT_MODEL: 未設定時使用 grok-4.7；需要固定版本時再明確設定。
+# OPENAI_API_KEY: 請用 `wrangler secret put OPENAI_API_KEY` 設定（LINE 文字回應）
+# OPENAI_TEXT_MODEL: 未設定時使用 gpt-4.1；需要切換模型時再明確設定。
 # LINE_CHANNEL_ACCESS_TOKEN、LINE_CHANNEL_SECRET、KNOWLEDGE_INGEST_TOKEN 請用 secret put 設定。
